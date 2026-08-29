@@ -1,74 +1,141 @@
 # CodeLens AI 🧠
 
-An AI-powered **Code Explainer** built with **Streamlit** and local **Qwen2.5-Coder 7B** via **Ollama** for the Alexa Developers SRM technical task. Paste Python, C++, Java, or JavaScript code to get beginner-friendly explanations, cleaner refactorings, and performance-focused optimizations in a single click.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Python: 3.13](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Ollama](https://img.shields.io/badge/Ollama-Local_Inference-000000?logo=ollama&logoColor=white)](https://ollama.com/)
+[![Model: Qwen2.5-Coder 7B](https://img.shields.io/badge/Model-Qwen2.5--Coder_7B-8A2BE2)](https://ollama.com/library/qwen2.5-coder:7b)
+[![Offline AI](https://img.shields.io/badge/Offline_AI-100%25_Private-success)](https://github.com/mrfrosty7007/CodeLens-AI)
 
-Designed with a sleek, modern dark UI inspired by developer tools like Cursor and GitHub Copilot.
+**CodeLens AI** is an offline, private, AI-powered code assistant built with **Streamlit** and powered locally by **Ollama** running **Qwen2.5-Coder 7B**. It empowers developers to understand, refactor, optimize, and safely execute code across **Python**, **C++**, **Java**, and **JavaScript**—all without sending a single line of code to external cloud APIs.
+
+Designed with a sleek, modern dark glassmorphism interface inspired by developer environments like Cursor and GitHub Copilot.
+
+---
+
+## 📑 Table of Contents
+
+- [CodeLens AI 🧠](#codelens-ai-)
+  - [📑 Table of Contents](#-table-of-contents)
+  - [✨ Features](#-features)
+  - [🛠️ Tech Stack](#️-tech-stack)
+  - [⚙️ Runtime Support](#️-runtime-support)
+  - [⚡ Quick Start](#-quick-start)
+    - [1. Prerequisites (Ollama)](#1-prerequisites-ollama)
+    - [2. Clone the Repository](#2-clone-the-repository)
+    - [3. Setup Virtual Environment & Install Dependencies](#3-setup-virtual-environment--install-dependencies)
+      - [Windows (PowerShell)](#windows-powershell)
+      - [macOS / Linux](#macos--linux)
+    - [4. Launch the Application](#4-launch-the-application)
+  - [📁 Repository Structure](#-repository-structure)
+  - [📸 Screenshots](#-screenshots)
+  - [🔮 Future Enhancements](#-future-enhancements)
+  - [📄 License](#-license)
+
+---
+
+## ✨ Features
+
+- **🧠 Explain Mode:** Generates beginner-friendly step-by-step breakdowns, algorithm logic explanations, time & space complexity ($O(N)$ analysis), and key variable/function roles.
+- **✨ Improve Mode:** Refactors code for enhanced readability, clean naming conventions, modern idiomatic standards, and maintainability with a concise change summary.
+- **⚡ Optimize Mode:** Re-architects code for optimal execution speed and minimal memory footprint, including big-O efficiency comparisons.
+- **🔄 Automatic Optimize → Replace Editor:** Automatically updates the code editor with the optimized code upon generation for seamless iteration.
+- **↩️ Undo Optimize:** Instant one-click rollback mechanism allowing you to revert back to your original code snippet anytime.
+- **▶️ Live Code Execution:** Safely execute Python, C++, Java, and JavaScript directly from the UI with real-time stdout, stderr, and execution duration metrics.
+- **🛡️ Sandboxed Execution:** Runs code within isolated temporary workspaces with a strict 5-second timeout and automated cleanup.
+- **🔍 Runtime Detection:** Automatically inspects host environment toolchains (Node.js, g++, JDK) and provides helpful, non-blocking guidance if a compiler or interpreter is missing.
+- **🔒 100% Offline & Private AI:** Local inference via Ollama ensures zero cloud dependencies, zero data tracking, zero API costs, and zero rate limits.
+- **📥 Markdown Export:** Download complete AI-generated reports and documentation as structured `.md` files in a single click.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Frontend & UI:** [Streamlit](https://streamlit.io/) with custom dark glassmorphic CSS
+- **LLM Engine:** [Qwen2.5-Coder 7B](https://ollama.com/library/qwen2.5-coder:7b) via local [Ollama](https://ollama.com/) REST API
+- **HTTP Client:** [`httpx`](https://www.python-httpx.org/) for fast, robust communication with Ollama
+- **Execution Sandbox:** Python `subprocess` engine with tempfile isolation, process timeouts, and runtime detection
+- **Syntax Highlighting:** [`Pygments`](https://pygments.org/)
+
+---
+
+## ⚙️ Runtime Support
+
+CodeLens AI executes supported languages locally on your machine. The execution engine detects installed toolchains and reports clear status banners in the UI.
+
+| Language | Execution Engine | Runtime Dependency |
+| :--- | :--- | :--- |
+| **Python** | Virtual Environment | Bundled Python interpreter (`sys.executable`) |
+| **JavaScript** | V8 Engine | [Node.js](https://nodejs.org/) (`node` on system `PATH`) |
+| **C++** | Native Binary (g++) | GCC / Clang (`g++` or `clang++` on system `PATH`) |
+| **Java** | JVM / Bytecode (javac) | OpenJDK / Oracle JDK (`javac` & `java` on system `PATH`) |
+
+> [!NOTE]
+> If a runtime for a specific language (e.g., `g++` or `node`) is not installed, code analysis (Explain, Improve, Optimize) will still work completely. The app will gracefully inform you only when attempting to run code for that specific language.
 
 ---
 
 ## ⚡ Quick Start
 
 ### 1. Prerequisites (Ollama)
-Make sure [Ollama](https://ollama.com/) is installed and running with `qwen2.5-coder:7b`:
-```bash
-# Pull and test the model
-ollama run qwen2.5-coder:7b
-```
 
-### 2. Setup Project
+1. Download and install **[Ollama](https://ollama.com/)**.
+2. Pull the **Qwen2.5-Coder 7B** model:
+   ```bash
+   ollama pull qwen2.5-coder:7b
+   ```
+3. Ensure the Ollama service is running:
+   ```bash
+   ollama serve
+   ```
+
+### 2. Clone the Repository
+
 ```bash
-# Clone the repository
 git clone https://github.com/mrfrosty7007/CodeLens-AI.git
 cd CodeLens-AI
-
-# Create virtual environment
-python -m venv .venv
 ```
 
+### 3. Setup Virtual Environment & Install Dependencies
+
 #### Windows (PowerShell)
+
 ```powershell
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+# Create virtual environment
+python -m venv .venv
+
+# Install dependencies using the venv executable directly
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
 #### macOS / Linux
+
 ```bash
+# Create virtual environment
+python3 -m venv .venv
+
+# Activate and install dependencies
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
----
+### 4. Launch the Application
 
-## 🚀 Running the App
+#### Windows (PowerShell)
 
-With your virtual environment activated and Ollama running:
+```powershell
+.\.venv\Scripts\python.exe -m streamlit run app.py
+```
+
+#### macOS / Linux
 
 ```bash
 streamlit run app.py
 ```
 
-Then open your browser at `http://localhost:8501`.
-
----
-
-## ✨ Features
-
-- **Explain Mode:** Breaks down what the code does, how it works step-by-step, time/space complexity analysis, and a breakdown of key functions and variables.
-- **Improve Mode:** Refactors the code for readability, clean naming conventions, and best practices with a concise change summary.
-- **Optimize Mode:** Re-architects the snippet for performance and reduced resource usage with complexity trade-off details.
-- **Multi-Language Support:** Seamlessly switches between **Python**, **C++**, **Java**, and **JavaScript** with pre-loaded algorithm samples.
-- **Local AI Inference:** 100% private, offline-capable code analysis powered by local Ollama (`qwen2.5-coder:7b`) with zero external API dependencies or rate limits.
-- **Export Capabilities:** Export generated Markdown explanations directly from the UI.
-- **Robust Error Handling:** Automatic Ollama availability checks and clear health notifications without application crashes.
-
----
-
-## 🛠️ Tech Stack
-
-- **Frontend / UI:** [Streamlit](https://streamlit.io/)
-- **LLM Engine:** [Qwen2.5-Coder 7B](https://ollama.com/library/qwen2.5-coder:7b) via local [Ollama](https://ollama.com/) API
-- **HTTP Client:** [`httpx`](https://www.python-httpx.org/)
-- **Syntax Highlighting:** [`Pygments`](https://pygments.org/)
+Once launched, open your browser and navigate to:
+```
+http://localhost:8501
+```
 
 ---
 
@@ -76,14 +143,15 @@ Then open your browser at `http://localhost:8501`.
 
 ```text
 CodeLens-AI/
-├── app.py              # Main Streamlit web application & UI
-├── ollama_client.py    # Ollama API client & health check
-├── prompts.py          # Structured prompt engineering & templates
-├── styles.css          # Dark glassmorphism stylesheet
-├── requirements.txt    # Python dependencies
+├── app.py              # Main Streamlit web application & user interface
+├── code_runner.py      # Multi-language code execution engine & sandbox
+├── ollama_client.py    # Ollama REST API client & health check
+├── prompts.py          # Structured prompt engineering & system instructions
+├── styles.css          # Dark glassmorphic design system
+├── requirements.txt    # Project dependencies
+├── README.md           # Documentation & setup guide
 ├── .gitignore          # Git exclusion rules
-├── README.md           # Project documentation
-└── assets/             # Screenshots and visual assets
+└── assets/             # Screenshots and visual documentation
     └── .gitkeep
 ```
 
@@ -105,14 +173,15 @@ Add your app screenshots to the `assets/` directory:
 
 ## 🔮 Future Enhancements
 
-- Real-time token streaming for faster response rendering
-- Code file upload support (`.py`, `.cpp`, `.java`, `.js`)
-- Interactive side-by-side diff viewer for original vs. improved/optimized code
-- Multi-turn conversation history for iterative questions
-- PDF export for structured study notes
+- **Project Helix UI Redesign:** Comprehensive interface modernization and high-density developer layout.
+- **Automatic Language Detection:** Real-time source code classification without manual dropdown selection.
+- **Side-by-Side Diff Viewer:** Visual side-by-side comparison between original and AI-modified code.
+- **File Upload Support:** Direct multi-file upload for `.py`, `.cpp`, `.java`, and `.js` source files.
+- **Streaming AI Responses:** Real-time token streaming for instantaneous response display.
+- **Session History:** Searchable local history of past prompts, analyses, and benchmarks.
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+Distributed under the MIT License. See `LICENSE` for more information.
