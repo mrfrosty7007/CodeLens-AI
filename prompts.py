@@ -86,7 +86,7 @@ Code:
 
 
 def build_prompt(mode: Mode, language: str, code: str) -> str:
-    """Build a mode-specific Gemini prompt for the given language and code."""
+    """Build a mode-specific prompt for the given language and code."""
     shared = _SHARED_RULES.format(language=language)
     templates = {
         "explain": _EXPLAIN_PROMPT,

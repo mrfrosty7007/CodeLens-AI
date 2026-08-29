@@ -6,7 +6,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from gemini_client import GeminiClientError, generate_response, get_api_key
+from ollama_client import OllamaClientError, generate, is_running
 from prompts import SUPPORTED_LANGUAGES, Mode, build_prompt
 
 APP_DIR = Path(__file__).resolve().parent
@@ -38,7 +38,7 @@ def render_hero() -> None:
     st.markdown(
         """
         <section class="hero">
-          <div class="eyebrow">College tech recruitment · Gemini 2.5 Flash</div>
+          <div class="eyebrow">College tech recruitment · Local AI · Qwen2.5-Coder 7B</div>
           <h1>CodeLens AI</h1>
           <p>
             Paste Python, C++, Java, or JavaScript and get a beginner-friendly explanation,
@@ -57,21 +57,20 @@ def render_hero() -> None:
 
 
 def run_analysis(mode: Mode, language: str, code: str) -> None:
+    st.session_state.last_result = None
+
     if not code.strip():
         st.warning("Paste some code before running an analysis.")
         return
-    if get_api_key() is None:
-        st.error(
-            "Gemini API key is missing. Copy `.env.example` to `.env` and add your "
-            "`GEMINI_API_KEY` from Google AI Studio, then restart the app."
-        )
+    if not is_running():
+        st.error("Ollama isn't running. Start Ollama and try again.")
         return
 
     prompt = build_prompt(mode, language, code)
-    with st.spinner("🧠 Gemini is analyzing your code..."):
+    with st.spinner("🧠 Ollama is analyzing your code..."):
         try:
-            result = generate_response(prompt)
-        except GeminiClientError as exc:
+            result = generate(prompt)
+        except OllamaClientError as exc:
             st.error(str(exc))
             return
 
@@ -152,7 +151,7 @@ def main() -> None:
             )
 
     st.markdown(
-        '<p class="app-footer">CodeLens AI · Powered by Gemini 2.5 Flash</p>',
+        '<p class="app-footer">CodeLens AI • Local AI • Qwen2.5-Coder 7B</p>',
         unsafe_allow_html=True,
     )
 

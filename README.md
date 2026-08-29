@@ -1,6 +1,6 @@
 # CodeLens AI 🧠
 
-An AI-powered **Code Explainer** built with **Streamlit** and **Gemini 2.5 Flash** for the Alexa Developers SRM technical task. Paste Python, C++, Java, or JavaScript code to get beginner-friendly explanations, cleaner refactorings, and performance-focused optimizations in a single click.
+An AI-powered **Code Explainer** built with **Streamlit** and local **Qwen2.5-Coder 7B** via **Ollama** for the Alexa Developers SRM technical task. Paste Python, C++, Java, or JavaScript code to get beginner-friendly explanations, cleaner refactorings, and performance-focused optimizations in a single click.
 
 Designed with a sleek, modern dark UI inspired by developer tools like Cursor and GitHub Copilot.
 
@@ -8,6 +8,14 @@ Designed with a sleek, modern dark UI inspired by developer tools like Cursor an
 
 ## ⚡ Quick Start
 
+### 1. Prerequisites (Ollama)
+Make sure [Ollama](https://ollama.com/) is installed and running with `qwen2.5-coder:7b`:
+```bash
+# Pull and test the model
+ollama run qwen2.5-coder:7b
+```
+
+### 2. Setup Project
 ```bash
 # Clone the repository
 git clone https://github.com/mrfrosty7007/CodeLens-AI.git
@@ -17,45 +25,23 @@ cd CodeLens-AI
 python -m venv .venv
 ```
 
-### Windows (PowerShell)
+#### Windows (PowerShell)
 ```powershell
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-copy .env.example .env
 ```
 
-### macOS / Linux
+#### macOS / Linux
 ```bash
 source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env
 ```
-
----
-
-## 🔑 `.env` Setup
-
-1. Copy `.env.example` to create your local `.env` file:
-   ```bash
-   # Windows
-   copy .env.example .env
-
-   # macOS / Linux
-   cp .env.example .env
-   ```
-
-2. Open `.env` and insert your Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey):
-   ```env
-   GEMINI_API_KEY=YOUR_GEMINI_API_KEY_HERE
-   ```
-
-> **Note:** Never commit the `.env` file. It is listed in `.gitignore` to prevent leaking API keys.
 
 ---
 
 ## 🚀 Running the App
 
-With your virtual environment activated:
+With your virtual environment activated and Ollama running:
 
 ```bash
 streamlit run app.py
@@ -71,16 +57,17 @@ Then open your browser at `http://localhost:8501`.
 - **Improve Mode:** Refactors the code for readability, clean naming conventions, and best practices with a concise change summary.
 - **Optimize Mode:** Re-architects the snippet for performance and reduced resource usage with complexity trade-off details.
 - **Multi-Language Support:** Seamlessly switches between **Python**, **C++**, **Java**, and **JavaScript** with pre-loaded algorithm samples.
+- **Local AI Inference:** 100% private, offline-capable code analysis powered by local Ollama (`qwen2.5-coder:7b`) with zero external API dependencies or rate limits.
 - **Export Capabilities:** Export generated Markdown explanations directly from the UI.
-- **Robust Error Handling:** Clear alerts for missing API keys, rate limits, empty inputs, or network timeouts without application crashes.
+- **Robust Error Handling:** Automatic Ollama availability checks and clear health notifications without application crashes.
 
 ---
 
 ## 🛠️ Tech Stack
 
 - **Frontend / UI:** [Streamlit](https://streamlit.io/)
-- **LLM Engine:** [Gemini 2.5 Flash](https://deepmind.google/technologies/gemini/) via the official [`google-genai`](https://googleapis.github.io/python-genai/) SDK
-- **Configuration:** [`python-dotenv`](https://pypi.org/project/python-dotenv/)
+- **LLM Engine:** [Qwen2.5-Coder 7B](https://ollama.com/library/qwen2.5-coder:7b) via local [Ollama](https://ollama.com/) API
+- **HTTP Client:** [`httpx`](https://www.python-httpx.org/)
 - **Syntax Highlighting:** [`Pygments`](https://pygments.org/)
 
 ---
@@ -90,11 +77,10 @@ Then open your browser at `http://localhost:8501`.
 ```text
 CodeLens-AI/
 ├── app.py              # Main Streamlit web application & UI
-├── gemini_client.py    # Google GenAI API client & error handling
+├── ollama_client.py    # Ollama API client & health check
 ├── prompts.py          # Structured prompt engineering & templates
 ├── styles.css          # Dark glassmorphism stylesheet
 ├── requirements.txt    # Python dependencies
-├── .env.example        # Environment variable template
 ├── .gitignore          # Git exclusion rules
 ├── README.md           # Project documentation
 └── assets/             # Screenshots and visual assets
