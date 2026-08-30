@@ -207,11 +207,21 @@ def resolve_python_runtime() -> tuple[str | None, str | None]:
         runtime_dir / "python.exe",
     ]
 
+    # In Linux / AppImage or POSIX environments, check bundled usr/bin/python3 and sys.executable
+    if sys.platform != "win32":
+        candidates.extend([
+            APP_DIR.parent / "usr" / "bin" / "python3",
+            APP_DIR / "usr" / "bin" / "python3",
+            Path(sys.executable),
+        ])
+
     # In local developer workspace mode (running uncompiled launcher.py), allow local .venv
     if not getattr(sys, "frozen", False):
         for dev_base in [APP_DIR, APP_DIR.parent]:
             candidates.append(dev_base / ".venv" / "Scripts" / "pythonw.exe")
             candidates.append(dev_base / ".venv" / "Scripts" / "python.exe")
+            candidates.append(dev_base / ".venv" / "bin" / "python3")
+            candidates.append(dev_base / ".venv" / "bin" / "python")
 
     for candidate in candidates:
         if candidate.is_file():
@@ -223,7 +233,7 @@ def resolve_python_runtime() -> tuple[str | None, str | None]:
                     test_exe = alt
             try:
                 res = subprocess.run(
-                    [str(test_exe), "-c", "import streamlit, httpx, pygments"],
+                    [str(test_exe), "-c", "import streamlit, google.genai, pygments"],
                     capture_output=True,
                     timeout=3.0,
                     creationflags=CREATE_NO_WINDOW,

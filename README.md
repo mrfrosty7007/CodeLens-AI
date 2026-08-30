@@ -1,31 +1,12 @@
-# CodeLens AI 🧠
+# CodeLens AI
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Windows: x64 Installer](https://img.shields.io/badge/Windows-CodeLensAI--Setup.exe-0078D6?logo=windows&logoColor=white)](https://github.com/mrfrosty7007/CodeLens-AI/releases)
+> AI-powered code explanation, optimization, and sandboxed execution — directly in your browser.
+
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Streamlit_Cloud-FF4B4B?logo=streamlit&logoColor=white)](https://codelens-ai-uqyhaddbzbnjmzzxm8izhr.streamlit.app)
 [![Python: 3.12+](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Ollama](https://img.shields.io/badge/Ollama-Local_Inference-000000?logo=ollama&logoColor=white)](https://ollama.com/)
-[![Model: Qwen2.5-Coder 3B](https://img.shields.io/badge/Model-Qwen2.5--Coder_3B-8A2BE2)](https://ollama.com/library/qwen2.5-coder:3b)
-[![Offline AI](https://img.shields.io/badge/Offline_AI-100%25_Private-success)](https://github.com/mrfrosty7007/CodeLens-AI)
-
-**CodeLens AI** is an offline, private, desktop AI code assistant built with **Streamlit** and powered locally by **Ollama** running **Qwen2.5-Coder 3B**. It empowers developers to understand, refactor, optimize, and safely execute code across **Python**, **C++**, **Java**, and **JavaScript**—all without sending a single line of code or prompt to external cloud APIs.
-
-Featuring a high-density, matte-graphite developer interface (Project Helix) inspired by Cursor, VS Code, and Linear.
-
----
-
-## 📑 Table of Contents
-
-- [CodeLens AI 🧠](#codelens-ai-)
-  - [📑 Table of Contents](#-table-of-contents)
-  - [🚀 Windows 1-Click Setup (Zero-Friction)](#-windows-1-click-setup-zero-friction)
-  - [✨ Features](#-features)
-  - [🔒 100% Offline & Private Architecture](#-100-offline--private-architecture)
-  - [🛠️ Tech Stack](#️-tech-stack)
-  - [⚙️ Multi-Language Runtime Sandbox](#️-multi-language-runtime-sandbox)
-  - [⚡ Developer Quick Start (Source Code)](#-developer-quick-start-source-code)
-  - [📦 Building the Windows Installer](#-building-the-windows-installer)
-  - [📁 Repository Structure](#-repository-structure)
-  - [📄 License](#-license)
+[![Streamlit: 1.40+](https://img.shields.io/badge/Streamlit-1.40+-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
+[![Model: Gemini 3.6 Flash](https://img.shields.io/badge/Model-Gemini_3.6_Flash-8A2BE2?logo=google&logoColor=white)](https://ai.google.dev/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
 
@@ -33,175 +14,175 @@ Featuring a high-density, matte-graphite developer interface (Project Helix) ins
 
 Experience CodeLens AI instantly without installing any dependencies or setting up local environments:
 
-> **Open CodeLens AI:** **[[https://codelens-ai.streamlit.app](https://codelens-ai-uqyhaddbzbnjmzzxm8izhr.streamlit.app)]([https://codelens-ai.streamlit.app](https://codelens-ai-uqyhaddbzbnjmzzxm8izhr.streamlit.app))**
+> **Open CodeLens AI:** **[https://codelens-ai-uqyhaddbzbnjmzzxm8izhr.streamlit.app](https://codelens-ai-uqyhaddbzbnjmzzxm8izhr.streamlit.app)**
 
 ---
 
-## 🚀 Windows 1-Click Setup (Zero-Friction)
+## 🏆 ADS Judge Experience
 
-No manual terminal commands or manual Python installation required.
+Judges can evaluate CodeLens AI in seconds directly in the browser:
 
-1. **Download:** Grab **`CodeLensAI-Setup.exe`** from [GitHub Releases](https://github.com/mrfrosty7007/CodeLens-AI/releases).
-2. **Install:** Run the setup wizard to install CodeLens AI with Desktop and Start Menu shortcuts.
-3. **Launch:** Open CodeLens AI. The application starts silently in the background with zero visible terminal windows.
-4. **Guided One-Time Onboarding:**
-   - **Ollama Detection:** Automatically verifies or installs Ollama via Windows Package Manager (`winget`).
-   - **Service Initialization:** Automatically boots `ollama serve` in the background.
-   - **Model Download:** Downloads `qwen2.5-coder:3b` (~1.9 GB) with real-time percentage and byte progress.
-5. **Start Coding:** Transition directly into the IDE workspace. CodeLens AI now operates completely offline.
+* **Open the Live App:** Navigate to **[https://codelens-ai-uqyhaddbzbnjmzzxm8izhr.streamlit.app](https://codelens-ai-uqyhaddbzbnjmzzxm8izhr.streamlit.app)**.
+* **Paste code:** Select your language (**Python**, **JavaScript**, **C++**, or **Java**) and paste any snippet.
+* **Click action:** Click **Explain**, **Improve**, **Optimize**, or **▶ Run**.
+* **No installation.**
+* **No Git.**
+* **No Python.**
+* **No API key required** *(pre-configured securely via Streamlit Community Cloud Secrets)*.
 
-> [!NOTE]
-> The model download (~1.9 GB) is a **one-time setup**. Once downloaded, all code explanations, refactorings, optimizations, and executions work 100% offline with zero internet connectivity.
+---
+
+## 🎬 Demo
+
+![CodeLens AI Interactive Demo](assets/demo.gif)
+*(Interactive workspace demo preview — `assets/demo.gif`)*
+
+---
+
+## 💡 Why CodeLens AI
+
+Modern developers regularly work with unfamiliar codebases, legacy algorithms, and multi-language repositories. Switching between separate documentation tabs, AI chat windows, refactoring assistants, and local terminal sandboxes creates friction and breaks flow.
+
+**CodeLens AI** unifies the entire workflow into a single, high-density browser workspace. Developers can **paste unfamiliar code**, **understand its structure and complexity**, **optimize its performance**, and **execute it in a secure sandbox** — all without leaving their browser.
 
 ---
 
 ## ✨ Features
 
-- **🧠 Explain Mode:** Generates beginner-friendly step-by-step breakdowns, algorithm logic explanations, time & space complexity ($O(N)$ analysis), and key variable/function roles.
-- **✨ Improve Mode:** Refactors code for enhanced readability, clean naming conventions, modern idiomatic standards, and maintainability with a concise change summary.
-- **⚡ Optimize Mode:** Re-architects code for optimal execution speed and minimal memory footprint, including big-O efficiency comparisons.
-- **🔄 Auto Replace & ↩️ Instant Undo:** Automatically updates the code editor with the AI-optimized code, with an instant one-click rollback button to revert anytime.
-- **▶️ Multi-Language Code Runner:** Safely execute Python, C++, Java, and JavaScript directly from the UI with real-time stdout, stderr, exit codes, and execution duration.
-- **🛡️ Sandboxed Process Isolation:** Runs code within isolated temporary workspaces with a strict 5-second timeout and automated cleanup.
-- **📂 VS Code Explorer Tree:** Persistent folder expansion with active file tracking and glowing status indicators.
-- **📥 One-Click Markdown Export:** Download full AI reports, complexity analyses, and documentation as formatted `.md` files.
+- 🧠 **Explain Code:** Generates beginner-friendly step-by-step breakdowns, algorithm logic explanations, time & space complexity ($O(N)$ analysis), and key variable/function roles.
+- ✨ **Improve Code:** Refactors code for enhanced readability, clean naming conventions, modern idiomatic standards, and maintainability with change summaries.
+- ⚡ **Optimize Code:** Re-architects code for optimal execution speed and minimal memory footprint, with automated code editor insertion and instant one-click Undo.
+- ▶️ **Sandboxed Execution:** Safely executes code with real-time stdout/stderr capture, millisecond runtime metrics, and 5-second process isolation.
+- 🌐 **Multi-Language Runtimes:** Full support for **Python**, **JavaScript**, **C++**, and **Java**.
+- 🎨 **VS Code-Inspired Interface:** Project Helix high-density matte-graphite theme with explorer file tree, line gutter, and synchronized status dock.
+- 🤖 **Powered by Gemini Cloud AI:** Low-latency cloud intelligence using Google Gemini 3.6 Flash via the official `google-genai` SDK.
+- 📥 **One-Click Markdown Export:** Download comprehensive AI reports and documentation as formatted `.md` files.
 
 ---
 
-## 🔒 100% Offline & Private Architecture
+## 🏗️ System Architecture
 
 ```text
-┌───────────────────────────────────────────────────────────┐
-│                      Your Computer                        │
-│                                                           │
-│  ┌───────────────┐     Local REST     ┌────────────────┐  │
-│  │  CodeLens AI  │ ◄────────────────► │  Ollama Server │  │
-│  │   (Streamlit) │   localhost:11434  │   (Local Daemon)│  │
-│  └───────┬───────┘                    └───────┬────────┘  │
-│          │                                    │           │
-│          ▼                                    ▼           │
-│   Sandboxed Runner                    Qwen 2.5 Coder 3B   │
-│   (Py/C++/Java/JS)                    (Local GPU / CPU)   │
-└───────────────────────────────────────────────────────────┘
-                            ▲
-                            │  ZERO Data Sent to Cloud
-                       [Firewall / Air-Gapped]
+┌────────────────────────────────────────────────────────────────────────┐
+│                          Judge / Developer Browser                     │
+│                                                                        │
+│  ┌──────────────────────┐    HTTPS API    ┌─────────────────────────┐  │
+│  │   CodeLens AI Web    │ ──────────────► │    Google Gemini API    │  │
+│  │   (Streamlit Cloud)  │ ◄────────────── │ (gemini-3.6-flash Cloud)│  │
+│  └──────────┬───────────┘                 └─────────────────────────┘  │
+│             │                                                          │
+│             ▼                                                          │
+│   Sandboxed Runner Host                                                │
+│   (Python / Node.js / GCC / JDK)                                       │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
-- **Zero Cloud API Calls:** All inference runs on your local CPU / GPU.
-- **Zero Telemetry / Zero Tracking:** Prompts and source files never leave your machine.
-- **Air-Gapped Friendly:** After the initial model pull, CodeLens AI operates with no network connection.
+---
+
+## 📸 Screenshots
+
+| Workspace | AI Explanation |
+| :---: | :---: |
+| ![Workspace](assets/screenshots/workspace.png)<br>*Project Helix IDE Workspace* | ![AI Explanation](assets/screenshots/explain.png)<br>*Structured AI Code Breakdown* |
+
+| Optimization & Instant Undo | Code Execution Sandbox |
+| :---: | :---: |
+| ![Optimization](assets/screenshots/optimize.png)<br>*Algorithmic Optimization & Auto-Replace* | ![Code Execution](assets/screenshots/execute.png)<br>*Sandboxed Multi-Language Execution* |
+
+---
+
+## 🚀 Quick Start (Web)
+
+The fastest and recommended way to use CodeLens AI is directly on the web:
+
+1. **Open the Live Demo:** Navigate to **[https://codelens-ai-uqyhaddbzbnjmzzxm8izhr.streamlit.app](https://codelens-ai-uqyhaddbzbnjmzzxm8izhr.streamlit.app)**.
+2. **Select Language & Paste Code:** Choose Python, JavaScript, C++, or Java and enter your snippet (or use the pre-loaded starter examples).
+3. **Analyze or Run:** Click **Explain**, **Improve**, **Optimize**, or **▶ Run** to inspect results instantly in the output dock.
+
+---
+
+## 💻 Local Development
+
+Contributors and developers can run CodeLens AI locally with Python 3.11+:
+
+### 1. Clone & Setup Environment
+
+```powershell
+git clone https://github.com/mrfrosty7007/CodeLens-AI.git
+cd CodeLens-AI
+
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+pip install -r requirements.txt
+copy .env.example .env
+streamlit run app.py
+```
+
+### 2. Configure Local API Key
+
+For local development, add your Google Gemini API key to `.env`:
+
+```env
+GEMINI_API_KEY=your_api_key_here
+```
+
+> [!NOTE]
+> The `GEMINI_API_KEY` is only required for local development and self-hosted instances. Get a free API key from [Google AI Studio](https://aistudio.google.com/).
+
+---
+
+## ☁️ Deployment
+
+CodeLens AI is optimized for 1-click deployment to **Streamlit Community Cloud**:
+
+1. Fork or push this repository to GitHub.
+2. Create a new app on [share.streamlit.io](https://share.streamlit.io/) pointing to `app.py`.
+3. In **Advanced Settings** -> **Secrets**, add:
+   ```toml
+   GEMINI_API_KEY = "your_gemini_api_key_here"
+   ```
+4. Click **Deploy!**
+
+For detailed deployment instructions and secrets configuration, see [`DEPLOYMENT.md`](DEPLOYMENT.md).
 
 ---
 
 ## 🛠️ Tech Stack
 
 - **Frontend & UI:** [Streamlit](https://streamlit.io/) with custom Project Helix matte-graphite CSS
-- **Local Inference Engine:** [Ollama](https://ollama.com/) running [Qwen2.5-Coder 3B](https://ollama.com/library/qwen2.5-coder:3b)
-- **HTTP Client:** [`httpx`](https://www.python-httpx.org/) with streaming progress & response parsing
-- **Installer & Packaging:** [NSIS](https://nsis.sourceforge.io/) & [PyInstaller](https://pyinstaller.org/)
-- **Multi-Language Sandbox:** Python `subprocess` engine with tempfile isolation and runtime toolchain detection
+- **AI Backend:** [Google Gemini API](https://ai.google.dev/) (`gemini-3.6-flash`) via the official [`google-genai`](https://pypi.org/project/google-genai/) SDK
+- **Core Runtime:** Python 3.11+ / 3.12+
+- **Syntax & Output:** [`Pygments`](https://pygments.org/) & Markdown rendering
+- **Sandbox Execution:** Subprocess engine with temporary filesystem isolation and timeout guards
+- **Configuration & Secrets:** `st.secrets` (Cloud) & [`python-dotenv`](https://pypi.org/project/python-dotenv/) (Local)
 
 ---
 
-## ⚙️ Multi-Language Runtime Sandbox
-
-CodeLens AI executes supported languages locally on your machine.
-
-| Language | Execution Engine | Runtime Dependency |
-| :--- | :--- | :--- |
-| **Python** | Virtual Environment | Bundled Python interpreter (`sys.executable`) |
-| **JavaScript** | V8 Engine | [Node.js](https://nodejs.org/) (`node` on system `PATH`) |
-| **C++** | Native Binary (g++) | GCC / Clang (`g++` or `clang++` on system `PATH`) |
-| **Java** | JVM / Bytecode (javac) | OpenJDK / Oracle JDK (`javac` & `java` on system `PATH`) |
-
-> [!TIP]
-> If a compiler/interpreter for a specific language (e.g. `g++` or `javac`) is not installed, AI code analysis (Explain, Improve, Optimize) will still work completely. The execution runner will guide you only if you click `▶ Run` for that specific language.
-
----
-
-## ⚡ Developer Quick Start (Source Code)
-
-### 1. Prerequisites (Ollama)
-
-```bash
-# Ensure Ollama is running
-ollama serve
-
-# Pull the required model
-ollama pull qwen2.5-coder:3b
-```
-
-### 2. Clone & Install Dependencies
-
-```bash
-git clone https://github.com/mrfrosty7007/CodeLens-AI.git
-cd CodeLens-AI
-
-# Create virtual environment
-python -m venv .venv
-
-# Activate and install dependencies
-# Windows (PowerShell):
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-
-# macOS / Linux:
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-### 3. Launch the Application
-
-```bash
-# Run via headless launcher (auto-opens browser)
-python launcher.py
-
-# Or directly with Streamlit:
-streamlit run app.py
-```
-
----
-
-## 📦 Building the Windows Installer
-
-To build `CodeLensAI-Setup.exe` from source:
-
-```powershell
-# 1. Install build dependencies
-pip install pyinstaller
-
-# 2. Run the automated build pipeline
-python build_installer.py
-```
-
-The compiled installer will be output to:
-```text
-dist/CodeLensAI-Setup.exe
-```
-
----
-
-## 📁 Repository Structure
+## 📁 Project Structure
 
 ```text
 CodeLens-AI/
-├── app.py                # Main Streamlit web application & IDE interface
-├── setup_manager.py      # Background dependency manager & one-time setup
-├── runtime_manager.py    # Multi-language runtime detection & one-click installers
-├── launcher.py           # Native headless Windows launcher
-├── code_runner.py        # Multi-language code execution engine & sandbox
-├── ollama_client.py      # Ollama REST client & inference helper
-├── prompts.py            # Structured prompt templates
-├── styles.css            # Project Helix dark matte-graphite styling
-├── installer.nsi         # NSIS Windows installer definition
-├── build_installer.py    # Automated packaging & build script
-├── generate_icons.py     # Multi-resolution icon asset generator
-├── requirements.txt      # Python dependencies
-├── RELEASE_NOTES.md      # GitHub Release notes & changelog
-└── assets/               # Application icons & branding assets
-    ├── icon.png
-    └── icon.ico
+├── app.py                  # Main Streamlit web application & IDE interface
+├── gemini_client.py        # Google Gemini GenAI SDK backend client
+├── setup_manager.py        # Environment setup & configuration manager
+├── runtime_manager.py      # Multi-language runtime detection & installers
+├── code_runner.py          # Multi-language code execution engine & sandbox
+├── prompts.py              # Structured prompt templates
+├── styles.css              # Project Helix dark matte-graphite styling
+├── .env.example            # Environment variables template
+├── DEPLOYMENT.md           # Streamlit Community Cloud deployment guide
+├── requirements.txt        # Runtime Python dependencies
+├── assets/                 # Application branding & media assets
+│   ├── demo.gif            # Interactive demo asset
+│   ├── icon.png            # App logo
+│   ├── icon.ico            # App icon
+│   └── screenshots/        # UI screenshot gallery
+│       ├── workspace.png
+│       ├── explain.png
+│       ├── optimize.png
+│       └── execute.png
+└── README.md               # Project documentation
 ```
 
 ---

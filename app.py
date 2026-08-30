@@ -10,7 +10,8 @@ from pathlib import Path
 import streamlit as st
 
 from code_runner import ExecutionResult, run_code
-from ollama_client import OllamaClientError, generate, is_running
+import gemini_client
+from gemini_client import GeminiClientError, generate, is_configured
 from prompts import SUPPORTED_LANGUAGES, Mode, build_prompt
 import runtime_manager
 import setup_manager
@@ -59,7 +60,7 @@ def render_html(html_str: str) -> None:
 
 
 def render_onboarding_wizard(status: dict) -> None:
-    """Render the professional Phase H3 setup wizard & onboarding screen."""
+    """Render the setup wizard & onboarding screen."""
     render_html(
         """
         <div class="setup-container">
@@ -75,17 +76,17 @@ def render_onboarding_wizard(status: dict) -> None:
                 </div>
                 <div>
                   <h1 class="setup-title">CodeLens AI Setup</h1>
-                  <div class="setup-subtitle">Zero-Friction Local AI Onboarding • One-Time Setup</div>
+                  <div class="setup-subtitle">Zero-Friction Cloud AI Onboarding • Setup</div>
                 </div>
               </div>
               <div class="ide-chips-section">
                 <div class="ide-chip chip-online">
                   <span class="status-indicator dot-online"></span>
-                  <span>100% Offline AI</span>
+                  <span>Cloud AI</span>
                 </div>
                 <div class="ide-chip chip-model">
                   <span class="chip-tag">MODEL</span>
-                  <span>Qwen 3B</span>
+                  <span>Gemini 3.6 Flash</span>
                 </div>
               </div>
             </div>
@@ -109,12 +110,12 @@ def render_onboarding_wizard(status: dict) -> None:
                 <span class="setup-card-badge badge-pass">✓ Ready</span>
               </div>
               <div class="setup-card-desc">
-                Desktop application files, sandboxed multi-language runners, and IDE shell are verified.
+                Application core, sandboxed multi-language runners, and IDE workspace are verified.
               </div>
               <div class="setup-meta-row">
-                <span class="setup-meta-item">Runtime: <span class="setup-meta-highlight">Python 3.12+ • Streamlit Desktop</span></span>
+                <span class="setup-meta-item">Runtime: <span class="setup-meta-highlight">Python 3.11+ • Streamlit</span></span>
                 <span>•</span>
-                <span class="setup-meta-item">Release: <span class="setup-meta-highlight">Phase H3 Build</span></span>
+                <span class="setup-meta-item">Release: <span class="setup-meta-highlight">Gemini 3.6 Edition</span></span>
               </div>
             </div>
             """
@@ -122,25 +123,19 @@ def render_onboarding_wizard(status: dict) -> None:
 
         st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
-        # Step 2: Ollama Service Card
-        ollama_installed = status["ollama_installed"]
-        ollama_running = status["ollama_running"]
+        # Step 2: Gemini API Configuration Card
+        api_configured = status["api_key_configured"]
 
-        if ollama_installed and ollama_running:
+        if api_configured:
             badge_cls = "badge-pass"
             badge_text = "✓ Connected"
             card_cls = "setup-card-passed"
-            desc_text = f"Ollama daemon is running at <code>http://localhost:11434</code> (executable: <code>{status['ollama_path'] or 'ollama'}</code>)."
-        elif ollama_installed and not ollama_running:
-            badge_cls = "badge-warn"
-            badge_text = "⚠️ Service Offline"
-            card_cls = "setup-card-active"
-            desc_text = "Ollama is installed on your computer, but the background inference service is not running."
+            desc_text = "Google Gemini 3.6 Flash API is configured via Streamlit secrets or <code>.env</code> and ready for cloud inference."
         else:
             badge_cls = "badge-fail"
-            badge_text = "❌ Missing"
+            badge_text = "❌ Missing API Key"
             card_cls = "setup-card-active"
-            desc_text = "Ollama is required to run Qwen2.5-Coder 3B completely offline on your local machine."
+            desc_text = "A Google Gemini API key is required to analyze, explain, and optimize code. Set <code>GEMINI_API_KEY</code> in Streamlit secrets or <code>.env</code> file, or enter it below."
 
         render_html(
             f"""
@@ -148,121 +143,47 @@ def render_onboarding_wizard(status: dict) -> None:
               <div class="setup-card-header">
                 <div class="setup-card-left">
                   <span class="setup-card-icon">⚡</span>
-                  <span class="setup-card-title">2. Ollama Local Inference Daemon</span>
+                  <span class="setup-card-title">2. Google Gemini API Backend</span>
                 </div>
                 <span class="setup-card-badge {badge_cls}">{badge_text}</span>
               </div>
               <div class="setup-card-desc">{desc_text}</div>
+              <div class="setup-meta-row">
+                <span class="setup-meta-item">Model: <span class="setup-meta-highlight">gemini-3.6-flash</span></span>
+                <span>•</span>
+                <span class="setup-meta-item">Provider: <span class="setup-meta-highlight">Google GenAI</span></span>
+                <span>•</span>
+                <span class="setup-meta-item">Backend: <span class="setup-meta-highlight">Cloud AI</span></span>
+              </div>
             </div>
             """
         )
 
-        if ollama_installed and not ollama_running:
-            if st.button("⚡ Start Ollama Service", use_container_width=True, type="primary"):
-                with st.spinner("Starting local Ollama background daemon..."):
-                    success, msg = setup_manager.start_ollama_service()
-                    if success:
+        if not api_configured:
+            st.markdown("<div style='height: 6px;'></div>", unsafe_allow_html=True)
+            new_key = st.text_input(
+                "Gemini API Key",
+                type="password",
+                placeholder="Enter your GEMINI_API_KEY (e.g. AIzaSy...)",
+                key="input_gemini_api_key",
+                label_visibility="collapsed",
+            )
+            if st.button("💾 Save API Key to .env", type="primary", use_container_width=True):
+                if new_key.strip():
+                    ok, msg = setup_manager.save_api_key(new_key.strip())
+                    if ok:
                         st.success(msg)
+                        check_system_status.clear()
                         time.sleep(0.5)
                         st.rerun()
                     else:
                         st.error(msg)
-
-        elif not ollama_installed:
-            c1, c2 = st.columns(2, gap="small")
-            with c1:
-                if st.button("📥 Install via winget", use_container_width=True, type="primary"):
-                    with st.spinner("Installing Ollama via Windows Package Manager (winget)..."):
-                        success, msg = setup_manager.install_ollama_winget()
-                        if success:
-                            st.success(msg)
-                            setup_manager.start_ollama_service()
-                            st.rerun()
-                        else:
-                            st.error(msg)
-            with c2:
-                if st.button("🌐 Download Official Installer", use_container_width=True):
-                    with st.spinner("Downloading official Ollama installer..."):
-                        success, msg = setup_manager.download_and_launch_installer()
-                        if success:
-                            st.info(msg)
-                        else:
-                            st.error(msg)
-
-        st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-
-        # Step 3: AI Model Card
-        model_ready = status["model_installed"]
-
-        if model_ready:
-            m_badge_cls = "badge-pass"
-            m_badge_text = "✓ Ready"
-            m_card_cls = "setup-card-passed"
-            m_desc = "<b>qwen2.5-coder:3b</b> is downloaded and verified in local model storage. Ready for offline inference."
-        else:
-            m_badge_cls = "badge-warn"
-            m_badge_text = "⚠️ Missing (~1.9 GB)"
-            m_card_cls = "setup-card-active"
-            m_desc = "<b>qwen2.5-coder:3b</b> is the required local AI model. It downloads directly from Ollama once (~1.9 GB) and works completely offline thereafter."
-
-        render_html(
-            f"""
-            <div class="setup-card {m_card_cls}">
-              <div class="setup-card-header">
-                <div class="setup-card-left">
-                  <span class="setup-card-icon">🤖</span>
-                  <span class="setup-card-title">3. AI Model (qwen2.5-coder:3b)</span>
-                </div>
-                <span class="setup-card-badge {m_badge_cls}">{m_badge_text}</span>
-              </div>
-              <div class="setup-card-desc">{m_desc}</div>
-              <div class="setup-meta-row">
-                <span class="setup-meta-item">Parameters: <span class="setup-meta-highlight">3.1 Billion</span></span>
-                <span>•</span>
-                <span class="setup-meta-item">Size: <span class="setup-meta-highlight">~1.9 GB (One-Time)</span></span>
-                <span>•</span>
-                <span class="setup-meta-item">Privacy: <span class="setup-meta-highlight">100% Offline</span></span>
-              </div>
-            </div>
-            """
-        )
-
-        if not model_ready and ollama_running:
-            if st.button("📥 Download Model (qwen2.5-coder:3b)", type="primary", use_container_width=True):
-                prog_bar = st.progress(0.0)
-                status_placeholder = st.empty()
-
-                download_error = None
-                for chunk in setup_manager.pull_model_stream("qwen2.5-coder:3b"):
-                    status_text = chunk.get("status", "Pulling model...")
-                    completed = chunk.get("completed", 0)
-                    total = chunk.get("total", 0)
-                    percent = chunk.get("percent", 0.0)
-
-                    if total > 0:
-                        gb_done = completed / (1024**3)
-                        gb_tot = total / (1024**3)
-                        status_placeholder.markdown(
-                            f"**{status_text}** • `{gb_done:.2f} GB / {gb_tot:.2f} GB` ({int(percent * 100)}%)"
-                        )
-                    else:
-                        status_placeholder.markdown(f"**{status_text}**")
-
-                    prog_bar.progress(percent)
-
-                    if chunk.get("error"):
-                        download_error = chunk["error"]
-                        break
-
-                if download_error:
-                    st.error(f"Download failed: {download_error}")
                 else:
-                    st.success("✨ Model downloaded and verified successfully!")
-                    st.session_state.show_setup_wizard = False
-                    time.sleep(1.0)
+                    st.warning("Please enter a valid API key.")
+
         st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
-        # Step 4: Multi-Language Runtimes Card
+        # Step 3: Multi-Language Runtimes Card
         runtimes = runtime_manager.detect_all_runtimes()
         all_rt_ok = all(r.installed for r in runtimes.values())
         rt_badge_cls = "badge-pass" if all_rt_ok else "badge-warn"
@@ -286,7 +207,7 @@ def render_onboarding_wizard(status: dict) -> None:
               <div class="setup-card-header">
                 <div class="setup-card-left">
                   <span class="setup-card-icon">⚡</span>
-                  <span class="setup-card-title">4. Multi-Language Sandboxes</span>
+                  <span class="setup-card-title">3. Multi-Language Sandboxes</span>
                 </div>
                 <span class="setup-card-badge {rt_badge_cls}">{rt_badge_text}</span>
               </div>
@@ -304,7 +225,7 @@ def render_onboarding_wizard(status: dict) -> None:
 
         # Action / Continue Button
         if status["ready"]:
-            st.success("🎉 All components are verified and operational! CodeLens AI is ready for 100% offline use.")
+            st.success("🎉 All components are verified and operational! CodeLens AI is powered by Gemini 3.6 Flash.")
             if st.button("🚀 Launch CodeLens AI Workspace", type="primary", use_container_width=True):
                 st.session_state.show_setup_wizard = False
                 st.rerun()
@@ -340,7 +261,7 @@ def render_hero() -> None:
                       <h1 class="ide-title">CodeLens AI</h1>
                       <span class="ide-badge">IDE</span>
                     </div>
-                    <div class="ide-subtitle">Offline AI • Qwen2.5-Coder 3B</div>
+                    <div class="ide-subtitle">Cloud AI • Gemini 3.6 Flash</div>
                   </div>
                 </div>
                 <div class="ide-chips-section">
@@ -350,18 +271,18 @@ def render_hero() -> None:
                   </div>
                   <div class="ide-chip chip-model">
                     <span class="chip-tag">MODEL</span>
-                    <span>Qwen 3B</span>
+                    <span>Gemini 3.6 Flash</span>
                   </div>
-                  <div class="ide-chip chip-offline">
-                    <span class="status-indicator dot-offline"></span>
-                    <span>Offline Ready</span>
+                  <div class="ide-chip chip-cloud">
+                    <span class="status-indicator dot-online"></span>
+                    <span>Cloud AI</span>
                   </div>
                 </div>
               </div>
               <div class="ide-status-strip">
                 <div class="strip-left">
                   <span class="strip-pulse-dot"></span>
-                  <span class="strip-text">Local Inference Engine Ready</span>
+                  <span class="strip-text">Gemini Inference Engine Ready</span>
                 </div>
                 <div class="strip-right">
                   <span class="strip-langs">Python • C++ • Java • JavaScript</span>
@@ -372,7 +293,7 @@ def render_hero() -> None:
         )
     with c_settings:
         st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
-        if st.button("⚙️", key="open_setup_wizard_btn", help="Setup & Model Health"):
+        if st.button("⚙️", key="open_setup_wizard_btn", help="Setup & API Key Health"):
             check_system_status.clear()
             st.session_state.saved_runtime = st.session_state.get("selected_runtime", "Python")
             st.session_state.saved_code = st.session_state.get("code_input", "")
@@ -383,7 +304,6 @@ def render_hero() -> None:
 def render_runtime_install_card(language: str) -> None:
     """Render a contextual one-click installer card when a required toolchain is missing."""
     info = runtime_manager.detect_runtime(language)
-    winget_ok = runtime_manager.is_winget_available()
 
     render_html(
         f"""
@@ -468,20 +388,28 @@ def extract_optimized_code(markdown_text: str) -> str | None:
 def run_analysis(mode: Mode, language: str, code: str) -> None:
     st.session_state.last_result = None
     st.session_state.run_result = None
+    st.session_state.api_error = None
 
     if not code.strip():
-        st.warning("Paste some code before running an analysis.")
+        st.toast("⚠️ Paste some code before running an analysis.", icon="⚠️")
         return
-    if not is_running():
-        st.error("Ollama isn't running. Start Ollama and try again.")
+    if not is_configured():
+        msg = "GEMINI_API_KEY is not configured. Please set your key in Streamlit secrets, .env, or open Setup (⚙️)."
+        st.toast("⚠️ GEMINI_API_KEY is not configured. Open Setup (⚙️) to configure.", icon="🔑")
+        st.session_state.api_error = msg
         return
 
     prompt = build_prompt(mode, language, code)
-    with st.spinner(f"🧠 Ollama is analyzing your code ({mode})..."):
+    with st.spinner(f"🧠 Gemini is analyzing your code ({mode})..."):
         try:
             result = generate(prompt)
-        except OllamaClientError as exc:
-            st.error(str(exc))
+        except GeminiClientError as exc:
+            st.toast(f"API Error: {exc}", icon="⚠️")
+            st.session_state.api_error = str(exc)
+            return
+        except Exception as exc:
+            st.toast(f"Unexpected error: {exc}", icon="❌")
+            st.session_state.api_error = f"Unexpected error: {exc}"
             return
 
     st.session_state.last_result = result
@@ -499,9 +427,10 @@ def run_analysis(mode: Mode, language: str, code: str) -> None:
 def execute_code_action(language: str, code: str) -> None:
     st.session_state.last_result = None
     st.session_state.run_result = None
+    st.session_state.api_error = None
 
     if not code.strip():
-        st.warning("Paste some code before running.")
+        st.toast("⚠️ Paste some code before running.", icon="⚠️")
         return
 
     with st.spinner(f"⚡ Running {language} code..."):
@@ -571,7 +500,9 @@ def main() -> None:
     sys_status = check_system_status()
     t_stat_ms = (time.perf_counter() - t_stat_0) * 1000
 
-    show_wizard = st.session_state.get("show_setup_wizard", not sys_status["ready"])
+    # Judge-First Startup: If key exists in st.secrets or .env -> open IDE immediately
+    has_key = gemini_client.is_configured()
+    show_wizard = st.session_state.get("show_setup_wizard", False) if has_key else True
 
     if show_wizard:
         render_onboarding_wizard(sys_status)
@@ -588,7 +519,7 @@ def main() -> None:
     active_filename = FILE_NAMES.get(runtime, "main.py")
     file_icon = FILE_ICONS.get(runtime, "📄")
 
-    # Phase H2 & H2.6: IDE Workspace Shell (Sidebar ~20% + Editor ~80%)
+    # IDE Workspace Shell (Sidebar ~20% + Editor ~80%)
     col_sidebar, col_editor = st.columns([1, 4], gap="small")
 
     with col_sidebar:
@@ -656,9 +587,9 @@ def main() -> None:
                 <div class="sidebar-session-card">
                   <div class="session-status-row">
                     <span class="session-pulse"></span>
-                    <span class="session-text">Ollama Engine Ready</span>
+                    <span class="session-text">Gemini Engine Ready</span>
                   </div>
-                  <div class="session-sub">Model: Qwen2.5-Coder 3B</div>
+                  <div class="session-sub">Model: Gemini 3.6 Flash</div>
                 </div>
 
                 <div class="sidebar-section-title">SHORTCUTS & TIPS</div>
@@ -740,7 +671,7 @@ def main() -> None:
                 <div class="editor-status-bar">
                   <div class="status-bar-left">
                     <span class="status-bullet">⚡</span>
-                    <span class="status-bar-item">Local AI Ready</span>
+                    <span class="status-bar-item">Powered by Gemini 3.6 Flash</span>
                     <span class="status-bar-divider">•</span>
                     <span class="status-bar-item">UTF-8</span>
                     <span class="status-bar-divider">•</span>
@@ -774,6 +705,7 @@ def main() -> None:
     # Output Dock (Terminal & Analysis Output)
     run_result: ExecutionResult | None = st.session_state.get("run_result")
     result = st.session_state.get("last_result")
+    api_error: str | None = st.session_state.get("api_error")
 
     with st.container(border=True):
         if run_result:
@@ -831,8 +763,24 @@ def main() -> None:
                 mime="text/markdown",
                 use_container_width=True,
             )
+        elif api_error:
+            render_html(
+                f"""
+                <div class="dock-header">
+                  <div class="dock-title-group">
+                    <span class="dock-icon">⚠️</span>
+                    <span class="dock-title">API Notice</span>
+                    <span class="chip status-failed">Attention</span>
+                  </div>
+                </div>
+                <div class="dock-content terminal-prompt-view">
+                  <div class="terminal-line terminal-system">Gemini API Notification</div>
+                  <div class="terminal-line" style="color: #f87171;">⚠️ {api_error}</div>
+                  <div class="terminal-line terminal-hint">The code editor remains fully interactive and usable above.</div>
+                </div>
+                """
+            )
         else:
-            # Default authentic VS Code terminal prompt
             render_html(
                 """
                 <div class="dock-header">
@@ -844,7 +792,7 @@ def main() -> None:
                 </div>
                 <div class="dock-content terminal-prompt-view">
                   <div class="terminal-line terminal-system">CodeLens AI [Workspace Terminal v2.5]</div>
-                  <div class="terminal-line terminal-ready">⚡ Inference engine ready (Qwen2.5-Coder 3B) • All runtimes active</div>
+                  <div class="terminal-line terminal-ready">⚡ Inference engine ready (Gemini 3.6 Flash) • All runtimes active</div>
                   <div class="terminal-line terminal-hint">Select code and click [Explain], [Improve], [Optimize], or [▶ Run] to view output.</div>
                   <div class="terminal-prompt-row">
                     <span class="terminal-ps1">codelens@workspace:~$</span>
@@ -854,7 +802,7 @@ def main() -> None:
                 """
             )
 
-    render_html('<p class="app-footer">CodeLens AI • Local AI • Qwen2.5-Coder 3B</p>')
+    render_html('<p class="app-footer">CodeLens AI • Powered by Gemini 3.6 Flash • Cloud AI</p>')
 
     t_total_ms = (time.perf_counter() - t_rerun_start) * 1000
     t_ui_ms = (time.perf_counter() - t_ui_0) * 1000
@@ -866,4 +814,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
