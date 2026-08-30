@@ -2,7 +2,7 @@
 
 > AI-powered code explanation, optimization, and sandboxed execution — directly in your browser.
 
-[![Live Demo](https://img.shields.io/badge/Live_Demo-Streamlit_Cloud-FF4B4B?logo=streamlit&logoColor=white)](https://codelens-ai.streamlit.app)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Streamlit_Cloud-FF4B4B?logo=streamlit&logoColor=white)]([https://codelens-ai.streamlit.app](https://codelens-ai-uqyhaddbzbnjmzzxm8izhr.streamlit.app))
 [![Python: 3.12+](https://img.shields.io/badge/Python-3.12+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Streamlit: 1.40+](https://img.shields.io/badge/Streamlit-1.40+-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io/)
 [![Model: Gemini 3.6 Flash](https://img.shields.io/badge/Model-Gemini_3.6_Flash-8A2BE2?logo=google&logoColor=white)](https://ai.google.dev/)
@@ -14,7 +14,7 @@
 
 Experience CodeLens AI instantly without installing any dependencies or setting up local environments:
 
-> **Open CodeLens AI:** **[https://codelens-ai.streamlit.app](https://codelens-ai.streamlit.app)**
+> **Open CodeLens AI:** **[[https://codelens-ai.streamlit.app](https://codelens-ai-uqyhaddbzbnjmzzxm8izhr.streamlit.app)]([https://codelens-ai.streamlit.app](https://codelens-ai-uqyhaddbzbnjmzzxm8izhr.streamlit.app))**
 
 ---
 
@@ -22,7 +22,7 @@ Experience CodeLens AI instantly without installing any dependencies or setting 
 
 Judges can evaluate CodeLens AI in seconds directly in the browser:
 
-1. **Open the Live App:** Navigate to **[https://codelens-ai.streamlit.app](https://codelens-ai.streamlit.app)**.
+1. **Open the Live App:** Navigate to **[[https://codelens-ai.streamlit.app](https://codelens-ai-uqyhaddbzbnjmzzxm8izhr.streamlit.app)]([https://codelens-ai.streamlit.app](https://codelens-ai-uqyhaddbzbnjmzzxm8izhr.streamlit.app))**.
 2. **Paste Code:** Select your language (**Python**, **JavaScript**, **C++**, or **Java**) and paste any snippet (or use pre-loaded examples).
 3. **Click Action:** Click **Explain**, **Improve**, **Optimize**, or **▶ Run** to inspect real-time outputs in the dock.
 
@@ -96,7 +96,7 @@ Modern developers regularly work with unfamiliar codebases, legacy algorithms, a
 
 The fastest and recommended way to use CodeLens AI is directly on the web:
 
-1. **Open the Live Demo:** Navigate to **[https://codelens-ai.streamlit.app](https://codelens-ai.streamlit.app)**.
+1. **Open the Live Demo:** Navigate to **[[https://codelens-ai.streamlit.app](https://codelens-ai-uqyhaddbzbnjmzzxm8izhr.streamlit.app)]([https://codelens-ai.streamlit.app](https://codelens-ai-uqyhaddbzbnjmzzxm8izhr.streamlit.app))**.
 2. **Select Language & Paste Code:** Choose Python, JavaScript, C++, or Java and enter your snippet (or use the pre-loaded starter examples).
 3. **Analyze or Run:** Click **Explain**, **Improve**, **Optimize**, or **▶ Run** to inspect results instantly in the output dock.
 
