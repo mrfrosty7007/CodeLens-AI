@@ -180,6 +180,7 @@ dist/CodeLensAI-Setup.exe
 CodeLens-AI/
 ├── app.py                # Main Streamlit web application & IDE interface
 ├── setup_manager.py      # Background dependency manager & one-time setup
+├── runtime_manager.py    # Multi-language runtime detection & one-click installers
 ├── launcher.py           # Native headless Windows launcher
 ├── code_runner.py        # Multi-language code execution engine & sandbox
 ├── ollama_client.py      # Ollama REST client & inference helper
