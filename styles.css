@@ -72,26 +72,26 @@ body,
 }
 
 /* ==========================================================================
-   Header & Spacing Control (Full IDE Desktop Width)
+   Header & Spacing Control (Hide All Streamlit Default Chrome)
    ========================================================================== */
 
 header[data-testid="stHeader"],
-[data-testid="stHeader"] {
+[data-testid="stHeader"],
+[data-testid="stToolbar"],
+[data-testid="stDecoration"],
+[data-testid="stStatusWidget"],
+[data-testid="stDeployButton"],
+#MainMenu,
+footer,
+header,
+#stDecoration,
+.viewerBadge_container__1QSob,
+.viewerBadge_link__1S137 {
   display: none !important;
   height: 0 !important;
   visibility: hidden !important;
-}
-
-[data-testid="stToolbar"] {
-  display: none !important;
-  visibility: hidden !important;
-}
-
-#MainMenu,
-footer,
-header {
-  display: none !important;
-  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 .block-container {
@@ -893,7 +893,7 @@ li[role="option"][aria-selected="true"] {
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace !important;
   font-size: 0.88rem !important;
   line-height: 1.6 !important;
-  color: var(--text-dim);
+  color: #94a3b8 !important;
   background: var(--gutter-bg);
   border: 1px solid var(--border-cyan-dim);
   border-radius: 6px 0 0 0;
@@ -921,7 +921,8 @@ textarea,
   font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace !important;
   font-size: 0.88rem !important;
   line-height: 1.6 !important;
-  color: #eaf0ff !important;
+  color: #f8fafc !important;
+  caret-color: var(--cyan-accent) !important;
   background: var(--editor-bg) !important;
   border: 1px solid var(--border-cyan-dim) !important;
   border-radius: 0 6px 0 0 !important;
@@ -930,6 +931,12 @@ textarea,
   box-shadow: none !important;
   box-sizing: border-box;
   transition: border-color 0.2s ease !important;
+}
+
+[data-testid="stTextArea"] textarea::selection,
+textarea::selection {
+  background: rgba(56, 189, 248, 0.3) !important;
+  color: #ffffff !important;
 }
 
 [data-testid="stTextArea"] textarea:focus {
