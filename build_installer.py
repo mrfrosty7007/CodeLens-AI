@@ -3,19 +3,20 @@
 Architecture:
 1. PyInstaller in `--onedir` mode to compile native launcher (CodeLensAI.exe).
 2. Bundle the existing `.venv` directly as `runtime/`.
-3. Launch using: `runtime\\Scripts\\pythonw.exe -m streamlit run app.py`
-4. Package the resulting folder with NSIS into dist/CodeLensAI-Setup.exe.
+3. Stage and bundle OllamaSetup.exe for silent local AI runtime onboarding.
+4. Package the resulting folder with NSIS into dist/CodeLensAI-Setup.exe with explicit runtime verification.
 """
 
 from __future__ import annotations
 
 import hashlib
 import os
+from pathlib import Path
 import shutil
 import subprocess
 import sys
 import time
-from pathlib import Path
+import urllib.request
 
 ROOT_DIR = Path(__file__).resolve().parent
 BUILD_DIR = ROOT_DIR / "build"
@@ -25,10 +26,13 @@ PACKAGE_DIR = BUILD_DIR / "package"
 PACKAGE_RUNTIME_DIR = PACKAGE_DIR / "runtime"
 DIST_DIR = ROOT_DIR / "dist"
 ASSETS_DIR = ROOT_DIR / "assets"
+TOOLS_DIR = ROOT_DIR / "tools"
 ICON_PATH = ASSETS_DIR / "icon.ico"
 NSIS_SCRIPT = ROOT_DIR / "installer.nsi"
 SETUP_EXE = DIST_DIR / "CodeLensAI-Setup.exe"
 VENV_DIR = ROOT_DIR / ".venv"
+OLLAMA_SETUP_EXE = TOOLS_DIR / "OllamaSetup.exe"
+OLLAMA_DOWNLOAD_URL = "https://ollama.com/download/OllamaSetup.exe"
 
 
 def format_rel_path(p: Path | str) -> str:
@@ -116,6 +120,48 @@ def calculate_sha256(file_path: Path) -> str:
     return sha256.hexdigest()
 
 
+def ensure_ollama_installer() -> Path:
+    """Ensure OllamaSetup.exe is available in tools/ directory for NSIS bundling."""
+    TOOLS_DIR.mkdir(parents=True, exist_ok=True)
+    if OLLAMA_SETUP_EXE.is_file() and OLLAMA_SETUP_EXE.stat().st_size > 10_000_000:
+        print(f"    Found Ollama installer: {format_rel_path(OLLAMA_SETUP_EXE)} ({OLLAMA_SETUP_EXE.stat().st_size / (1024*1024):.1f} MB)", flush=True)
+        return OLLAMA_SETUP_EXE
+
+    # Check local cache / Downloads directory
+    cached_candidates = [
+        Path.home() / "Downloads" / "OllamaSetup.exe",
+        Path(os.environ.get("LOCALAPPDATA", "")) / "Temp" / "OllamaSetup.exe",
+    ]
+    for cand in cached_candidates:
+        if cand.is_file() and cand.stat().st_size > 10_000_000:
+            print(f"    Copying cached Ollama installer from {cand}...", flush=True)
+            shutil.copy2(cand, OLLAMA_SETUP_EXE)
+            return OLLAMA_SETUP_EXE
+
+    # Download from official CDN if not present
+    print(f"    Downloading Ollama installer from {OLLAMA_DOWNLOAD_URL}...", flush=True)
+    req = urllib.request.Request(OLLAMA_DOWNLOAD_URL, headers={"User-Agent": "CodeLensAI-Builder/1.0"})
+    with urllib.request.urlopen(req) as resp, open(OLLAMA_SETUP_EXE, "wb") as out_f:
+        total_size = int(resp.headers.get("Content-Length", 0))
+        downloaded = 0
+        t0 = time.time()
+        while True:
+            chunk = resp.read(1024 * 1024)
+            if not chunk:
+                break
+            out_f.write(chunk)
+            downloaded += len(chunk)
+            if total_size > 0:
+                pct = (downloaded / total_size) * 100
+                mb_done = downloaded / (1024 * 1024)
+                mb_tot = total_size / (1024 * 1024)
+                print(f"    Downloading Ollama: {mb_done:.1f} MB / {mb_tot:.1f} MB ({pct:.1f}%)", end="\r", flush=True)
+
+    elapsed = time.time() - t0
+    print(f"\n    [OK] Ollama installer downloaded in {elapsed:.1f}s: {format_rel_path(OLLAMA_SETUP_EXE)}")
+    return OLLAMA_SETUP_EXE
+
+
 # ==============================================================================
 # Build Pipeline Stages (1 to 7)
 # ==============================================================================
@@ -134,7 +180,7 @@ def step_1_verify_prerequisites() -> None:
     print(f"    Found virtual environment: {format_rel_path(VENV_DIR)}", flush=True)
 
     # 2. Verify launcher and app source files
-    for req_file in ["launcher.py", "app.py", "setup_manager.py", "runtime_manager.py", "code_runner.py", "gemini_client.py", "prompts.py"]:
+    for req_file in ["launcher.py", "app.py", "setup_manager.py", "runtime_manager.py", "code_runner.py", "prompts.py", "ollama_client.py"]:
         p = ROOT_DIR / req_file
         if not p.is_file():
             raise RuntimeError(f"Required source file missing: {format_rel_path(p)}")
@@ -148,14 +194,17 @@ def step_1_verify_prerequisites() -> None:
         generate_icons.main()
     print(f"    Application icon: {format_rel_path(ICON_PATH)}", flush=True)
 
-    # 4. Check NSIS
+    # 4. Stage Ollama installer
+    ensure_ollama_installer()
+
+    # 5. Check NSIS compiler
     makensis = find_makensis()
     if makensis:
         print(f"    Found NSIS compiler: {makensis}", flush=True)
     else:
         print("    [!] Warning: makensis not found. Final installer step will require NSIS.", flush=True)
 
-    # 5. Clean build work directories
+    # 6. Clean build work directories
     if PACKAGE_DIR.exists():
         shutil.rmtree(PACKAGE_DIR, ignore_errors=True)
     PACKAGE_DIR.mkdir(parents=True, exist_ok=True)
@@ -179,8 +228,13 @@ def step_2_compile_launcher() -> Path:
         f"--icon={ICON_PATH}",
         "--name=CodeLensAI",
         "--hidden-import=tkinter",
+        "--hidden-import=tkinter.ttk",
         "--hidden-import=urllib.request",
+        "--hidden-import=urllib.error",
+        "--hidden-import=json",
+        "--hidden-import=threading",
         "--hidden-import=ctypes",
+        "--hidden-import=socket",
         "--distpath",
         str(PYINSTALLER_DIST),
         "--workpath",
@@ -221,6 +275,7 @@ def step_3_assemble_package(launcher_exe: Path) -> None:
         "styles.css",
         "code_runner.py",
         "runtime_manager.py",
+        "ollama_client.py",
         "gemini_client.py",
         "prompts.py",
         "setup_manager.py",
@@ -242,7 +297,7 @@ def step_3_assemble_package(launcher_exe: Path) -> None:
 
 
 def step_4_bundle_venv_runtime() -> None:
-    """[4/7] Bundling existing .venv as runtime/ into build/package/runtime/."""
+    """[4/7] Bundling existing .venv as runtime/ and archiving as runtime.zip."""
     print("\n[4/7] Bundling .venv as runtime/")
     if PACKAGE_RUNTIME_DIR.exists():
         shutil.rmtree(PACKAGE_RUNTIME_DIR, ignore_errors=True)
@@ -265,7 +320,17 @@ def step_4_bundle_venv_runtime() -> None:
         raise RuntimeError(f"Bundled runtime missing python executables in {format_rel_path(PACKAGE_RUNTIME_DIR / 'Scripts')}")
 
     item_count = sum(1 for _ in PACKAGE_RUNTIME_DIR.rglob("*"))
-    print(f"[OK] Bundled {item_count} runtime files in {elapsed:.2f}s: {format_rel_path(target_pyw)}")
+    print(f"    Bundled {item_count} runtime files in {elapsed:.2f}s: {format_rel_path(target_pyw)}")
+
+    # Create runtime.zip for atomic NSIS packaging
+    runtime_zip = PACKAGE_DIR / "runtime.zip"
+    if runtime_zip.is_file():
+        runtime_zip.unlink(missing_ok=True)
+    print(f"    Compressing runtime into {format_rel_path(runtime_zip)}...", flush=True)
+    t_zip = time.time()
+    shutil.make_archive(str(PACKAGE_DIR / "runtime"), "zip", str(PACKAGE_RUNTIME_DIR))
+    zip_size_mb = runtime_zip.stat().st_size / (1024 * 1024)
+    print(f"[OK] Runtime archive ready in {time.time() - t_zip:.2f}s: {format_rel_path(runtime_zip)} ({zip_size_mb:.1f} MB)")
 
 
 def step_5_verify_runtime() -> None:
@@ -273,24 +338,25 @@ def step_5_verify_runtime() -> None:
     print("\n[5/7] Verifying bundled runtime")
     pkg_py = PACKAGE_RUNTIME_DIR / "Scripts" / "python.exe"
 
-    # 1. Verify Streamlit CLI execution
-    print(f"    Testing: {format_rel_path(pkg_py)} -m streamlit --version", flush=True)
+    # 1. Verify Streamlit package import and version
+    print(f"    Testing: {format_rel_path(pkg_py)} -c \"import streamlit; print(streamlit.__version__)\"", flush=True)
     res = subprocess.run(
-        [str(pkg_py), "-m", "streamlit", "--version"],
+        [str(pkg_py), "-c", "import streamlit; print('Streamlit', streamlit.__version__)"],
         capture_output=True,
         text=True,
         timeout=15,
+        stdin=subprocess.DEVNULL,
     )
     if res.returncode != 0:
         raise RuntimeError(f"Streamlit verification failed:\nStderr: {res.stderr}\nStdout: {res.stdout}")
-    print(f"    [OK] Streamlit version: {res.stdout.strip()}", flush=True)
+    print(f"    [OK] {res.stdout.strip()}", flush=True)
 
     # 2. Verify all application imports within package environment
     print("    Testing application module imports...", flush=True)
     test_import_cmd = [
         str(pkg_py),
         "-c",
-        "import streamlit, google.genai, pygments, app, setup_manager, runtime_manager, code_runner, gemini_client, prompts; print('__PACKAGE_READY__')",
+        "import streamlit, httpx, pygments, app, setup_manager, runtime_manager, code_runner, prompts; print('__PACKAGE_READY__')",
     ]
     res_import = subprocess.run(
         test_import_cmd,
@@ -298,6 +364,7 @@ def step_5_verify_runtime() -> None:
         capture_output=True,
         text=True,
         timeout=15,
+        stdin=subprocess.DEVNULL,
     )
     if res_import.returncode != 0 or "__PACKAGE_READY__" not in res_import.stdout:
         raise RuntimeError(
