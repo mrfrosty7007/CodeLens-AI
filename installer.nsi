@@ -69,50 +69,27 @@ Unicode True
 Section "MainSection" SEC01
     SetOverwrite on
 
-    ; 1. Copy Application Core Root Files
-    DetailPrint "Installing CodeLens AI core files..."
-    SetOutPath "$INSTDIR"
-    File "build\package\CodeLensAI.exe"
-    File "build\package\app.py"
-    File "build\package\launcher.py"
-    File "build\package\setup_manager.py"
-    File "build\package\runtime_manager.py"
-    File "build\package\code_runner.py"
-    File "build\package\prompts.py"
-    File "build\package\styles.css"
-    File "build\package\requirements.txt"
-    File "build\package\README.md"
-    File /nonfatal "build\package\ollama_client.py"
-    File /nonfatal "build\package\gemini_client.py"
+    ; 1. Install Bundled Portable Python Runtime
+    DetailPrint "Installing portable Python runtime..."
+    SetOutPath "$INSTDIR\runtime"
+    File /r "build\package\runtime\*.*"
 
-    ; 2. Copy PyInstaller Dependencies (_internal)
-    DetailPrint "Installing native runtime dependencies..."
-    SetOutPath "$INSTDIR\_internal"
-    File /r "build\package\_internal\*.*"
-
-    ; 3. Copy Application Assets
-    DetailPrint "Installing application assets..."
-    SetOutPath "$INSTDIR\assets"
-    File /r "build\package\assets\*.*"
-
-    ; 4. Install Bundled Python Runtime Explicitly
-    DetailPrint "Extracting isolated Python runtime environment..."
-    SetOutPath "$INSTDIR"
-    File "build\package\runtime.zip"
-    
-    nsExec::ExecToLog 'powershell -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -Path \"$INSTDIR\runtime.zip\" -DestinationPath \"$INSTDIR\runtime\" -Force; Remove-Item \"$INSTDIR\runtime.zip\" -Force"'
-
-    ; 5. Verify Bundled Runtime Integrity
+    ; 2. Verify Bundled Runtime Immediately
     DetailPrint "Verifying Python runtime integrity..."
-    IfFileExists "$INSTDIR\runtime\Scripts\pythonw.exe" runtime_check_ok runtime_check_missing
-
-runtime_check_missing:
-    DetailPrint "CRITICAL ERROR: Python runtime executable ($INSTDIR\runtime\Scripts\pythonw.exe) was not found!"
-    MessageBox MB_ICONSTOP|MB_OK "Installation Aborted:$\r$\n$\r$\nThe bundled Python runtime ($INSTDIR\runtime\Scripts\pythonw.exe) is missing or corrupted.$\r$\nPlease ensure sufficient disk space and re-run setup."
-    Abort "Missing runtime executable."
+    IfFileExists "$INSTDIR\runtime\pythonw.exe" runtime_check_ok 0
+    IfFileExists "$INSTDIR\runtime\python.exe" runtime_check_ok 0
+    IfFileExists "$INSTDIR\runtime\Scripts\pythonw.exe" runtime_check_ok 0
+    DetailPrint "CRITICAL ERROR: Python runtime executable ($INSTDIR\runtime\pythonw.exe) was not found!"
+    MessageBox MB_ICONSTOP|MB_OK "Installation Aborted:$\r$\n$\r$\nThe bundled Python runtime ($INSTDIR\runtime\pythonw.exe) failed to install.$\r$\nPlease ensure sufficient disk space and re-run setup."
+    Abort "Bundled Python runtime failed to install."
 
 runtime_check_ok:
-    DetailPrint "Python runtime verified successfully."
+    DetailPrint "Bundled Python runtime verified successfully."
+
+    ; 3. Copy Application Core Root Files and Dependencies
+    DetailPrint "Installing CodeLens AI core files..."
+    SetOutPath "$INSTDIR"
+    File /r /x runtime "build\package\*.*"
 
     ; 6. Detect and Install Ollama
     DetailPrint "Checking Ollama AI engine..."

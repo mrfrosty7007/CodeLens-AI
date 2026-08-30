@@ -162,8 +162,84 @@ def try_focus_existing_window() -> bool:
 
 
 # ==============================================================================
-# Port Management & Server Health Checking
+# Port, PID & Server Health Management
 # ==============================================================================
+PID_FILE = LOG_FILE.parent / "codelens.pid"
+
+
+def get_saved_pid() -> int | None:
+    """Retrieve saved Streamlit server PID from pid file."""
+    if PID_FILE.is_file():
+        try:
+            content = PID_FILE.read_text(encoding="utf-8").strip()
+            if content.isdigit():
+                return int(content)
+        except Exception:
+            pass
+    return None
+
+
+def write_pid(pid: int) -> None:
+    """Persist active Streamlit server PID to pid file."""
+    try:
+        PID_FILE.write_text(str(pid), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def remove_pid() -> None:
+    """Remove pid file upon server termination."""
+    try:
+        PID_FILE.unlink(missing_ok=True)
+    except Exception:
+        pass
+
+
+def is_process_running(pid: int) -> bool:
+    """Check if process with given PID is currently active in the OS."""
+    if sys.platform == "win32":
+        try:
+            kernel32 = ctypes.windll.kernel32
+            handle = kernel32.OpenProcess(0x1000, False, pid)
+            if handle:
+                exit_code = ctypes.c_ulong()
+                kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code))
+                kernel32.CloseHandle(handle)
+                return exit_code.value == 259
+            return False
+        except Exception:
+            return False
+    else:
+        try:
+            os.kill(pid, 0)
+            return True
+        except OSError:
+            return False
+
+
+def cleanup_stale_or_zombie_backend() -> None:
+    """Clean up stale PID file or unresponsive zombie processes."""
+    saved_pid = get_saved_pid()
+    if not saved_pid:
+        return
+
+    if is_process_running(saved_pid):
+        log(f"[Process] Found unresponsive process (PID {saved_pid}) with dead HTTP server. Terminating...")
+        try:
+            if sys.platform == "win32":
+                subprocess.run(
+                    ["taskkill", "/F", "/T", "/PID", str(saved_pid)],
+                    capture_output=True,
+                    creationflags=CREATE_NO_WINDOW,
+                )
+            else:
+                os.kill(saved_pid, signal.SIGKILL)
+        except Exception as exc:
+            log(f"[Process] Warning: Could not terminate PID {saved_pid}: {exc}")
+
+    remove_pid()
+
+
 def find_free_port(starting_port: int = DEFAULT_PORT) -> int:
     """Find an available TCP port starting from starting_port."""
     for port in range(starting_port, starting_port + 50):
@@ -176,7 +252,7 @@ def find_free_port(starting_port: int = DEFAULT_PORT) -> int:
     return starting_port
 
 
-def check_server_health(port: int) -> bool:
+def check_server_health(port: int = DEFAULT_PORT, timeout_sec: float = 2.0) -> bool:
     """Check whether Streamlit HTTP server returns HTTP 200 on health / root."""
     endpoints = [
         f"http://{HOST}:{port}/_stcore/health",
@@ -188,7 +264,7 @@ def check_server_health(port: int) -> bool:
                 url,
                 headers={"User-Agent": "CodeLensAI-Launcher/1.0"},
             )
-            with urllib.request.urlopen(req, timeout=1.0) as resp:
+            with urllib.request.urlopen(req, timeout=timeout_sec) as resp:
                 if resp.status == 200:
                     return True
         except Exception:
@@ -210,10 +286,10 @@ def verify_and_repair_runtime() -> tuple[str | None, str | None]:
     runtime_dir = APP_DIR / "runtime"
 
     candidates: list[Path] = [
-        runtime_dir / "Scripts" / "pythonw.exe",
-        runtime_dir / "Scripts" / "python.exe",
         runtime_dir / "pythonw.exe",
         runtime_dir / "python.exe",
+        runtime_dir / "Scripts" / "pythonw.exe",
+        runtime_dir / "Scripts" / "python.exe",
     ]
 
     if sys.platform != "win32":
@@ -252,7 +328,7 @@ def verify_and_repair_runtime() -> tuple[str | None, str | None]:
 
     err = (
         "The bundled Python runtime was not found or is incomplete.\n\n"
-        f"Expected path: {runtime_dir / 'Scripts' / 'pythonw.exe'}\n\n"
+        f"Expected path: {runtime_dir / 'pythonw.exe'}\n\n"
         "Please reinstall CodeLens AI using CodeLensAI-Setup.exe."
     )
     log(f"[Fatal] {err}")
@@ -926,7 +1002,7 @@ def start_codelens_server() -> tuple[subprocess.Popen | None, int, str | None]:
             log(f"[Fatal] {err}")
             return None, port, err
 
-        if check_server_health(port):
+        if check_server_health(port, timeout_sec=0.5):
             elapsed = time.time() - start_time
             log(f"[Ready] Server responsive with HTTP 200 in {elapsed:.2f}s!")
 
@@ -935,6 +1011,7 @@ def start_codelens_server() -> tuple[subprocess.Popen | None, int, str | None]:
                 webbrowser.open(url)
                 browser_opened = True
 
+            write_pid(process.pid)
             return process, port, None
 
         time.sleep(0.35)
@@ -954,16 +1031,38 @@ def start_codelens_server() -> tuple[subprocess.Popen | None, int, str | None]:
 
 
 def main() -> None:
-    # Single-Instance Protection
+    target_url = f"http://{HOST}:{DEFAULT_PORT}"
+
+    # 1. Single-Instance Check: If server is already responding on port 8501, immediately open browser and exit
+    log(f"[Main] Checking if CodeLens AI is already active on port {DEFAULT_PORT}...")
+    if check_server_health(DEFAULT_PORT, timeout_sec=2.0):
+        log(f"[SingleInstance] Active server detected at {target_url}. Reopening browser session.")
+        try_focus_existing_window()
+        webbrowser.open(target_url)
+        sys.exit(0)
+
+    # 2. Server is not responding: Clean up any stale PID file or unresponsive zombie process
+    cleanup_stale_or_zombie_backend()
+
+    # 3. Single-Instance Mutex: Prevent duplicate concurrent launching sequences
     lock = SingleInstanceLock()
     if not lock.acquire():
-        log("[SingleInstance] Another instance of CodeLens AI is already active.")
-        focused = try_focus_existing_window()
-        log(f"[SingleInstance] Focus existing window result: {focused}. Exiting secondary launcher.")
+        # Another launcher instance is actively starting the backend; wait up to 8s for it to become ready
+        log("[SingleInstance] Another launcher instance is in progress. Waiting for server readiness...")
+        start_wait = time.time()
+        while time.time() - start_wait < 8.0:
+            if check_server_health(DEFAULT_PORT, timeout_sec=1.0):
+                log(f"[SingleInstance] Server became ready. Opening browser to {target_url}.")
+                webbrowser.open(target_url)
+                sys.exit(0)
+            time.sleep(0.5)
+
+        try_focus_existing_window()
         sys.exit(0)
 
     def on_exit_cleanup() -> None:
         lock.release()
+        remove_pid()
 
     atexit.register(on_exit_cleanup)
 
@@ -981,6 +1080,7 @@ def main() -> None:
                     active_process.kill()
                 except Exception:
                     pass
+        remove_pid()
 
     atexit.register(terminate_active_process)
 
@@ -988,7 +1088,8 @@ def main() -> None:
         process, port, error = start_codelens_server()
         if process and not error:
             active_process = process
-            log("[Main] CodeLens AI is running actively. Entering wait loop.")
+            write_pid(process.pid)
+            log(f"[Main] CodeLens AI (PID {process.pid}) is running on port {port}. Entering wait loop.")
             try:
                 active_process.wait()
                 log(f"[Main] Streamlit server exited with code {active_process.returncode}.")
