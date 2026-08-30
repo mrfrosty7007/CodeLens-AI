@@ -29,6 +29,14 @@ Featuring a high-density, matte-graphite developer interface (Project Helix) ins
 
 ---
 
+## 🌐 Live Demo
+
+Experience CodeLens AI instantly without installing any dependencies or setting up local environments:
+
+> **Open CodeLens AI:** **[[https://codelens-ai.streamlit.app](https://codelens-ai-uqyhaddbzbnjmzzxm8izhr.streamlit.app)]([https://codelens-ai.streamlit.app](https://codelens-ai-uqyhaddbzbnjmzzxm8izhr.streamlit.app))**
+
+---
+
 ## 🚀 Windows 1-Click Setup (Zero-Friction)
 
 No manual terminal commands or manual Python installation required.
