@@ -1,11 +1,12 @@
 ; ==============================================================================
 ; CodeLens AI - Nullsoft Scriptable Install System (NSIS) Script
 ; Produces: dist\CodeLensAI-Setup.exe
-; Phase H3: Zero-Friction Windows Installer
+; Phase H3: Zero-Friction Windows Installer with Bundled Runtime & Ollama AI
 ; ==============================================================================
 
 !include "MUI2.nsh"
 !include "FileFunc.nsh"
+!include "LogicLib.nsh"
 
 ; ------------------------------------------------------------------------------
 ; General Definitions
@@ -40,7 +41,7 @@ Unicode True
 ; Installer Pages
 ; ------------------------------------------------------------------------------
 !define MUI_WELCOMEPAGE_TITLE "Welcome to CodeLens AI Setup"
-!define MUI_WELCOMEPAGE_TEXT "This wizard will guide you through installing CodeLens AI—the AI code intelligence workspace powered by Google Gemini.$\r$\n$\r$\nClick Next to continue."
+!define MUI_WELCOMEPAGE_TEXT "This wizard will guide you through installing CodeLens AI—the zero-friction local AI code intelligence workspace powered by Ollama and Qwen2.5-Coder.$\r$\n$\r$\nClick Next to continue."
 !insertmacro MUI_PAGE_WELCOME
 
 !insertmacro MUI_PAGE_DIRECTORY
@@ -49,7 +50,7 @@ Unicode True
 ; Finish Page with Launch Option
 !define MUI_FINISHPAGE_RUN "$INSTDIR\${MAIN_EXECUTABLE}"
 !define MUI_FINISHPAGE_RUN_TEXT "Launch CodeLens AI now"
-!define MUI_FINISHPAGE_TEXT "CodeLens AI has been successfully installed on your computer.$\r$\n$\r$\nConfigure your GEMINI_API_KEY in .env to begin analyzing, explaining, and optimizing code."
+!define MUI_FINISHPAGE_TEXT "CodeLens AI has been successfully installed on your computer.$\r$\n$\r$\nYour offline AI intelligence workspace (Qwen2.5-Coder 3B) is configured and ready to use."
 !insertmacro MUI_PAGE_FINISH
 
 ; ------------------------------------------------------------------------------
@@ -66,25 +67,90 @@ Unicode True
 ; Installer Section
 ; ------------------------------------------------------------------------------
 Section "MainSection" SEC01
-    SetOutPath "$INSTDIR"
     SetOverwrite on
 
-    ; Copy all packaged distribution files
-    File /r "build\package\*.*"
+    ; 1. Install Bundled Portable Python Runtime
+    DetailPrint "Installing portable Python runtime..."
+    SetOutPath "$INSTDIR\runtime"
+    File /r "build\package\runtime\*.*"
 
-    ; Store installation folder
+    ; 2. Verify Bundled Runtime Immediately
+    DetailPrint "Verifying Python runtime integrity..."
+    IfFileExists "$INSTDIR\runtime\pythonw.exe" runtime_check_ok 0
+    IfFileExists "$INSTDIR\runtime\python.exe" runtime_check_ok 0
+    IfFileExists "$INSTDIR\runtime\Scripts\pythonw.exe" runtime_check_ok 0
+    DetailPrint "CRITICAL ERROR: Python runtime executable ($INSTDIR\runtime\pythonw.exe) was not found!"
+    MessageBox MB_ICONSTOP|MB_OK "Installation Aborted:$\r$\n$\r$\nThe bundled Python runtime ($INSTDIR\runtime\pythonw.exe) failed to install.$\r$\nPlease ensure sufficient disk space and re-run setup."
+    Abort "Bundled Python runtime failed to install."
+
+runtime_check_ok:
+    DetailPrint "Bundled Python runtime verified successfully."
+
+    ; 3. Copy Application Core Root Files and Dependencies
+    DetailPrint "Installing CodeLens AI core files..."
+    SetOutPath "$INSTDIR"
+    File /r /x runtime "build\package\*.*"
+
+    ; 6. Detect and Install Ollama
+    DetailPrint "Checking Ollama AI engine..."
+    StrCpy $0 "0"
+
+    ; Check standard paths
+    IfFileExists "$LOCALAPPDATA\Programs\Ollama\ollama.exe" ollama_found 0
+    IfFileExists "$PROGRAMFILES\Ollama\ollama.exe" ollama_found 0
+    IfFileExists "$PROGRAMFILES64\Ollama\ollama.exe" ollama_found 0
+
+    ; Check registry uninstall keys
+    ReadRegStr $1 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Ollama" "UninstallString"
+    StrCmp $1 "" 0 ollama_found
+    ReadRegStr $1 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Ollama" "UninstallString"
+    StrCmp $1 "" 0 ollama_found
+
+    ; Check PATH
+    nsExec::ExecToStack 'cmd /c where ollama'
+    Pop $1
+    StrCmp $1 "0" ollama_found ollama_install_step
+
+ollama_install_step:
+    DetailPrint "Ollama not found on system. Extracting bundled Ollama installer..."
+    InitPluginsDir
+    SetOutPath "$PLUGINSDIR"
+    File "tools\OllamaSetup.exe"
+
+    DetailPrint "Installing Ollama silently..."
+    nsExec::ExecToLog '"$PLUGINSDIR\OllamaSetup.exe" /silent'
+    Pop $1
+    DetailPrint "Ollama installation completed (exit code: $1)."
+    Delete "$PLUGINSDIR\OllamaSetup.exe"
+    Goto ollama_service_step
+
+ollama_found:
+    DetailPrint "Ollama AI engine is already installed."
+    Goto ollama_service_step
+
+ollama_service_step:
+    ; 7. Start and Wait for Ollama Service
+    DetailPrint "Verifying Ollama background service..."
+    nsExec::ExecToStack 'powershell -NoProfile -ExecutionPolicy Bypass -Command "if (-not (Get-Process ollama -ErrorAction SilentlyContinue)) { if (Test-Path \"$$env:LOCALAPPDATA\Programs\Ollama\ollama.exe\") { Start-Process \"$$env:LOCALAPPDATA\Programs\Ollama\ollama.exe\" -ArgumentList \"serve\" -WindowStyle Hidden } else { Start-Process \"ollama\" -ArgumentList \"serve\" -WindowStyle Hidden } }"'
+
+    DetailPrint "Waiting for Ollama service to be ready on port 11434..."
+    nsExec::ExecToLog 'powershell -NoProfile -ExecutionPolicy Bypass -Command "$$ready = $$false; for ($$i = 0; $$i -lt 30; $$i++) { try { $$r = Invoke-WebRequest -Uri \"http://127.0.0.1:11434/api/tags\" -UseBasicParsing -TimeoutSec 2; if ($$r.StatusCode -eq 200) { $$ready = $$true; break } } catch {}; Start-Sleep -Seconds 1 }; if ($$ready) { Write-Host \"Ollama service is active and responsive.\" } else { Write-Warning \"Ollama service did not respond within 30s. Setup will continue.\" }"'
+
+    ; 8. Download Default Model (qwen2.5-coder:3b)
+    DetailPrint "Checking default local AI model (qwen2.5-coder:3b)..."
+    nsExec::ExecToLog 'powershell -NoProfile -ExecutionPolicy Bypass -Command "$$env:PATH = \"$$env:LOCALAPPDATA\Programs\Ollama;\" + $$env:PATH; Write-Host \"Checking installed models in Ollama...\"; try { $$tags = Invoke-RestMethod -Uri \"http://127.0.0.1:11434/api/tags\" -TimeoutSec 5; $$m = $$tags.models | Where-Object { $$_.name -like \"*qwen2.5-coder:3b*\" }; if ($$m) { Write-Host \"Model qwen2.5-coder:3b is already installed.\"; exit 0 } } catch {}; Write-Host \"Downloading qwen2.5-coder:3b model (~1.9 GB)... Progress will be shown below:\"; if (Get-Command ollama -ErrorAction SilentlyContinue) { ollama pull qwen2.5-coder:3b } else { try { $$body = @{ name = \"qwen2.5-coder:3b\"; stream = $$false } | ConvertTo-Json; Invoke-RestMethod -Uri \"http://127.0.0.1:11434/api/pull\" -Method Post -Body $$body -ContentType \"application/json\" -TimeoutSec 600; Write-Host \"Model downloaded successfully.\" } catch { Write-Warning \"Model download deferred to launcher: $$_\" } }"'
+
+    ; 9. Shortcuts & Registry
+    SetOutPath "$INSTDIR"
     WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_DIR_REGKEY}" "" "$INSTDIR\${MAIN_EXECUTABLE}"
 
-    ; Create Shortcuts
     CreateDirectory "$SMPROGRAMS\CodeLens AI"
     CreateShortcut "$SMPROGRAMS\CodeLens AI\CodeLens AI.lnk" "$INSTDIR\${MAIN_EXECUTABLE}" "" "$INSTDIR\assets\icon.ico" 0
     CreateShortcut "$SMPROGRAMS\CodeLens AI\Uninstall CodeLens AI.lnk" "$INSTDIR\Uninstall.exe" "" "$INSTDIR\assets\icon.ico" 0
     CreateShortcut "$DESKTOP\CodeLens AI.lnk" "$INSTDIR\${MAIN_EXECUTABLE}" "" "$INSTDIR\assets\icon.ico" 0
 
-    ; Write Uninstaller
     WriteUninstaller "$INSTDIR\Uninstall.exe"
 
-    ; Windows Add/Remove Programs Registry Entries
     WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayName" "$(^Name)"
     WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "UninstallString" "$INSTDIR\Uninstall.exe"
     WriteRegStr ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}" "DisplayIcon" "$INSTDIR\assets\icon.ico"
@@ -104,18 +170,15 @@ SectionEnd
 ; Uninstaller Section
 ; ------------------------------------------------------------------------------
 Section Uninstall
-    ; Remove Shortcuts
     Delete "$DESKTOP\CodeLens AI.lnk"
     Delete "$SMPROGRAMS\CodeLens AI\CodeLens AI.lnk"
     Delete "$SMPROGRAMS\CodeLens AI\Uninstall CodeLens AI.lnk"
     RMDir "$SMPROGRAMS\CodeLens AI"
 
-    ; Remove App Files
     Delete "$INSTDIR\${MAIN_EXECUTABLE}"
     Delete "$INSTDIR\Uninstall.exe"
     RMDir /r "$INSTDIR"
 
-    ; Remove Registry Keys
     DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_UNINST_KEY}"
     DeleteRegKey ${PRODUCT_UNINST_ROOT_KEY} "${PRODUCT_DIR_REGKEY}"
     SetAutoClose true
