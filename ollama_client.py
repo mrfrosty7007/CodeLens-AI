@@ -4,10 +4,23 @@ from __future__ import annotations
 
 import httpx
 
-OLLAMA_BASE_URL = "http://localhost:11434"
-OLLAMA_GENERATE_URL = "http://localhost:11434/api/generate"
-MODEL_NAME = "qwen2.5-coder:7b"
+OLLAMA_BASE_URL = "http://127.0.0.1:11434"
+MODEL_NAME = "qwen2.5-coder:3b"
 TIMEOUT_SECONDS = 120.0
+
+_CLIENT: httpx.Client | None = None
+
+
+def get_client() -> httpx.Client:
+    """Return a reusable persistent HTTP client with connection pooling."""
+    global _CLIENT
+    if _CLIENT is None or _CLIENT.is_closed:
+        _CLIENT = httpx.Client(
+            base_url=OLLAMA_BASE_URL,
+            timeout=TIMEOUT_SECONDS,
+            limits=httpx.Limits(max_keepalive_connections=5, max_connections=10),
+        )
+    return _CLIENT
 
 
 class OllamaClientError(Exception):
@@ -17,7 +30,8 @@ class OllamaClientError(Exception):
 def is_running() -> bool:
     """Check whether the local Ollama server is running and reachable."""
     try:
-        response = httpx.get(OLLAMA_BASE_URL, timeout=5.0)
+        client = get_client()
+        response = client.get("/", timeout=2.0)
         return response.status_code == 200
     except Exception:
         return False
@@ -40,11 +54,13 @@ def generate(prompt: str) -> str:
         "model": MODEL_NAME,
         "prompt": prompt,
         "stream": False,
+        "keep_alive": "10m",
     }
 
     try:
-        response = httpx.post(
-            OLLAMA_GENERATE_URL,
+        client = get_client()
+        response = client.post(
+            "/api/generate",
             json=payload,
             timeout=TIMEOUT_SECONDS,
         )

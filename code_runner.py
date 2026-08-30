@@ -11,6 +11,8 @@ import tempfile
 import time
 from dataclasses import dataclass
 
+import runtime_manager
+
 
 @dataclass
 class ExecutionResult:
@@ -71,16 +73,17 @@ def run_code(language: str, code: str, timeout: float = 5.0) -> ExecutionResult:
 
 
 def _run_python(code: str, temp_dir: str, timeout: float, start_time: float) -> ExecutionResult:
-    python_exe = sys.executable or shutil.which("python") or shutil.which("python3")
-    if not python_exe:
+    info = runtime_manager.detect_runtime("Python")
+    if not info.installed or not info.executable_path:
         return ExecutionResult(
             stdout="",
             stderr="",
             exit_code=None,
             execution_time_ms=0.0,
-            error_message="Python interpreter not found in system PATH.",
+            error_message=info.missing_reason or "Python interpreter not found in system PATH.",
             is_missing_toolchain=True,
         )
+    python_exe = info.executable_path
 
     file_path = os.path.join(temp_dir, "script.py")
     with open(file_path, "w", encoding="utf-8") as f:
@@ -115,16 +118,17 @@ def _run_python(code: str, temp_dir: str, timeout: float, start_time: float) -> 
 
 
 def _run_cpp(code: str, temp_dir: str, timeout: float, start_time: float) -> ExecutionResult:
-    compiler = shutil.which("g++") or shutil.which("clang++")
-    if not compiler:
+    info = runtime_manager.detect_runtime("C++")
+    if not info.installed or not info.compiler_path:
         return ExecutionResult(
             stdout="",
             stderr="",
             exit_code=None,
             execution_time_ms=0.0,
-            error_message="C++ compiler (g++ or clang++) is not installed or not found in system PATH.",
+            error_message=info.missing_reason or "C++ compiler (g++, clang++, or cl) is not installed or not found in system PATH.",
             is_missing_toolchain=True,
         )
+    compiler = info.compiler_path
 
     src_file = os.path.join(temp_dir, "main.cpp")
     exe_name = "main.exe" if os.name == "nt" else "main"
@@ -194,17 +198,18 @@ def _run_cpp(code: str, temp_dir: str, timeout: float, start_time: float) -> Exe
 
 
 def _run_java(code: str, temp_dir: str, timeout: float, start_time: float) -> ExecutionResult:
-    javac = shutil.which("javac")
-    java = shutil.which("java")
-    if not javac or not java:
+    info = runtime_manager.detect_runtime("Java")
+    if not info.installed or not info.compiler_path or not info.executable_path:
         return ExecutionResult(
             stdout="",
             stderr="",
             exit_code=None,
             execution_time_ms=0.0,
-            error_message="Java compiler (javac) or runtime (java) is not installed or not found in system PATH.",
+            error_message=info.missing_reason or "Java compiler (javac) or runtime (java) is not installed or not found in system PATH.",
             is_missing_toolchain=True,
         )
+    javac = info.compiler_path
+    java = info.executable_path
 
     # Detect class name from code
     match = re.search(r"\bpublic\s+class\s+([A-Za-z0-9_]+)", code)
@@ -277,16 +282,17 @@ def _run_java(code: str, temp_dir: str, timeout: float, start_time: float) -> Ex
 
 
 def _run_javascript(code: str, temp_dir: str, timeout: float, start_time: float) -> ExecutionResult:
-    node = shutil.which("node")
-    if not node:
+    info = runtime_manager.detect_runtime("JavaScript")
+    if not info.installed or not info.executable_path:
         return ExecutionResult(
             stdout="",
             stderr="",
             exit_code=None,
             execution_time_ms=0.0,
-            error_message="Node.js (node) runtime is not installed or not found in system PATH.",
+            error_message=info.missing_reason or "Node.js (node) runtime is not installed or not found in system PATH.",
             is_missing_toolchain=True,
         )
+    node = info.executable_path
 
     src_file = os.path.join(temp_dir, "script.js")
     with open(src_file, "w", encoding="utf-8") as f:

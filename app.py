@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 import textwrap
+import time
 from pathlib import Path
 
 import streamlit as st
@@ -11,6 +12,8 @@ import streamlit as st
 from code_runner import ExecutionResult, run_code
 from ollama_client import OllamaClientError, generate, is_running
 from prompts import SUPPORTED_LANGUAGES, Mode, build_prompt
+import runtime_manager
+import setup_manager
 
 APP_DIR = Path(__file__).resolve().parent
 STYLES_PATH = APP_DIR / "styles.css"
@@ -29,12 +32,24 @@ MODE_LABELS = {
 }
 
 
-def load_css() -> None:
+@st.cache_data(show_spinner=False)
+def get_cached_css() -> str:
+    """Read and cache CSS stylesheet content from disk."""
     if STYLES_PATH.exists():
-        st.markdown(
-            f"<style>{STYLES_PATH.read_text(encoding='utf-8')}</style>",
-            unsafe_allow_html=True,
-        )
+        return STYLES_PATH.read_text(encoding="utf-8")
+    return ""
+
+
+def load_css() -> None:
+    css = get_cached_css()
+    if css:
+        st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+
+
+@st.cache_data(ttl=4, show_spinner=False)
+def check_system_status() -> dict:
+    """Query system readiness with a lightweight TTL cache."""
+    return setup_manager.get_system_status()
 
 
 def render_html(html_str: str) -> None:
@@ -43,55 +58,394 @@ def render_html(html_str: str) -> None:
     st.markdown(cleaned, unsafe_allow_html=True)
 
 
-def render_hero() -> None:
+def render_onboarding_wizard(status: dict) -> None:
+    """Render the professional Phase H3 setup wizard & onboarding screen."""
     render_html(
         """
-        <header class="ide-header">
-          <div class="ide-header-main">
-            <div class="ide-brand-section">
-              <div class="ide-logo-icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="m18 16 4-4-4-4"></path>
-                  <path d="m6 8-4 4 4 4"></path>
-                  <path d="m14.5 4-5 16"></path>
-                </svg>
-              </div>
-              <div class="ide-title-block">
-                <div class="ide-title-row">
-                  <h1 class="ide-title">CodeLens AI</h1>
-                  <span class="ide-badge">IDE</span>
+        <div class="setup-container">
+          <div class="setup-header-card">
+            <div class="setup-header-top">
+              <div class="setup-brand">
+                <div class="ide-logo-icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m18 16 4-4-4-4"></path>
+                    <path d="m6 8-4 4 4 4"></path>
+                    <path d="m14.5 4-5 16"></path>
+                  </svg>
                 </div>
-                <div class="ide-subtitle">Offline AI • Qwen2.5-Coder 7B</div>
+                <div>
+                  <h1 class="setup-title">CodeLens AI Setup</h1>
+                  <div class="setup-subtitle">Zero-Friction Local AI Onboarding • One-Time Setup</div>
+                </div>
               </div>
-            </div>
-            <div class="ide-chips-section">
-              <div class="ide-chip chip-online">
-                <span class="status-indicator dot-online"></span>
-                <span>Online</span>
-              </div>
-              <div class="ide-chip chip-model">
-                <span class="chip-tag">MODEL</span>
-                <span>Qwen 7B</span>
-              </div>
-              <div class="ide-chip chip-offline">
-                <span class="status-indicator dot-offline"></span>
-                <span>Offline Ready</span>
+              <div class="ide-chips-section">
+                <div class="ide-chip chip-online">
+                  <span class="status-indicator dot-online"></span>
+                  <span>100% Offline AI</span>
+                </div>
+                <div class="ide-chip chip-model">
+                  <span class="chip-tag">MODEL</span>
+                  <span>Qwen 3B</span>
+                </div>
               </div>
             </div>
           </div>
-          <div class="ide-status-strip">
-            <div class="strip-left">
-              <span class="strip-pulse-dot"></span>
-              <span class="strip-text">Local Inference Engine Ready</span>
-            </div>
-            <div class="strip-right">
-              <span class="strip-langs">Python • C++ • Java • JavaScript</span>
-            </div>
-          </div>
-        </header>
+        </div>
         """
     )
 
+    col_center = st.columns([0.08, 0.84, 0.08])[1]
+
+    with col_center:
+        # Step 1: CodeLens AI Application Card
+        render_html(
+            """
+            <div class="setup-card setup-card-passed">
+              <div class="setup-card-header">
+                <div class="setup-card-left">
+                  <span class="setup-card-icon">🧠</span>
+                  <span class="setup-card-title">1. CodeLens AI Core Engine</span>
+                </div>
+                <span class="setup-card-badge badge-pass">✓ Ready</span>
+              </div>
+              <div class="setup-card-desc">
+                Desktop application files, sandboxed multi-language runners, and IDE shell are verified.
+              </div>
+              <div class="setup-meta-row">
+                <span class="setup-meta-item">Runtime: <span class="setup-meta-highlight">Python 3.12+ • Streamlit Desktop</span></span>
+                <span>•</span>
+                <span class="setup-meta-item">Release: <span class="setup-meta-highlight">Phase H3 Build</span></span>
+              </div>
+            </div>
+            """
+        )
+
+        st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+
+        # Step 2: Ollama Service Card
+        ollama_installed = status["ollama_installed"]
+        ollama_running = status["ollama_running"]
+
+        if ollama_installed and ollama_running:
+            badge_cls = "badge-pass"
+            badge_text = "✓ Connected"
+            card_cls = "setup-card-passed"
+            desc_text = f"Ollama daemon is running at <code>http://localhost:11434</code> (executable: <code>{status['ollama_path'] or 'ollama'}</code>)."
+        elif ollama_installed and not ollama_running:
+            badge_cls = "badge-warn"
+            badge_text = "⚠️ Service Offline"
+            card_cls = "setup-card-active"
+            desc_text = "Ollama is installed on your computer, but the background inference service is not running."
+        else:
+            badge_cls = "badge-fail"
+            badge_text = "❌ Missing"
+            card_cls = "setup-card-active"
+            desc_text = "Ollama is required to run Qwen2.5-Coder 3B completely offline on your local machine."
+
+        render_html(
+            f"""
+            <div class="setup-card {card_cls}">
+              <div class="setup-card-header">
+                <div class="setup-card-left">
+                  <span class="setup-card-icon">⚡</span>
+                  <span class="setup-card-title">2. Ollama Local Inference Daemon</span>
+                </div>
+                <span class="setup-card-badge {badge_cls}">{badge_text}</span>
+              </div>
+              <div class="setup-card-desc">{desc_text}</div>
+            </div>
+            """
+        )
+
+        if ollama_installed and not ollama_running:
+            if st.button("⚡ Start Ollama Service", use_container_width=True, type="primary"):
+                with st.spinner("Starting local Ollama background daemon..."):
+                    success, msg = setup_manager.start_ollama_service()
+                    if success:
+                        st.success(msg)
+                        time.sleep(0.5)
+                        st.rerun()
+                    else:
+                        st.error(msg)
+
+        elif not ollama_installed:
+            c1, c2 = st.columns(2, gap="small")
+            with c1:
+                if st.button("📥 Install via winget", use_container_width=True, type="primary"):
+                    with st.spinner("Installing Ollama via Windows Package Manager (winget)..."):
+                        success, msg = setup_manager.install_ollama_winget()
+                        if success:
+                            st.success(msg)
+                            setup_manager.start_ollama_service()
+                            st.rerun()
+                        else:
+                            st.error(msg)
+            with c2:
+                if st.button("🌐 Download Official Installer", use_container_width=True):
+                    with st.spinner("Downloading official Ollama installer..."):
+                        success, msg = setup_manager.download_and_launch_installer()
+                        if success:
+                            st.info(msg)
+                        else:
+                            st.error(msg)
+
+        st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+
+        # Step 3: AI Model Card
+        model_ready = status["model_installed"]
+
+        if model_ready:
+            m_badge_cls = "badge-pass"
+            m_badge_text = "✓ Ready"
+            m_card_cls = "setup-card-passed"
+            m_desc = "<b>qwen2.5-coder:3b</b> is downloaded and verified in local model storage. Ready for offline inference."
+        else:
+            m_badge_cls = "badge-warn"
+            m_badge_text = "⚠️ Missing (~1.9 GB)"
+            m_card_cls = "setup-card-active"
+            m_desc = "<b>qwen2.5-coder:3b</b> is the required local AI model. It downloads directly from Ollama once (~1.9 GB) and works completely offline thereafter."
+
+        render_html(
+            f"""
+            <div class="setup-card {m_card_cls}">
+              <div class="setup-card-header">
+                <div class="setup-card-left">
+                  <span class="setup-card-icon">🤖</span>
+                  <span class="setup-card-title">3. AI Model (qwen2.5-coder:3b)</span>
+                </div>
+                <span class="setup-card-badge {m_badge_cls}">{m_badge_text}</span>
+              </div>
+              <div class="setup-card-desc">{m_desc}</div>
+              <div class="setup-meta-row">
+                <span class="setup-meta-item">Parameters: <span class="setup-meta-highlight">3.1 Billion</span></span>
+                <span>•</span>
+                <span class="setup-meta-item">Size: <span class="setup-meta-highlight">~1.9 GB (One-Time)</span></span>
+                <span>•</span>
+                <span class="setup-meta-item">Privacy: <span class="setup-meta-highlight">100% Offline</span></span>
+              </div>
+            </div>
+            """
+        )
+
+        if not model_ready and ollama_running:
+            if st.button("📥 Download Model (qwen2.5-coder:3b)", type="primary", use_container_width=True):
+                prog_bar = st.progress(0.0)
+                status_placeholder = st.empty()
+
+                download_error = None
+                for chunk in setup_manager.pull_model_stream("qwen2.5-coder:3b"):
+                    status_text = chunk.get("status", "Pulling model...")
+                    completed = chunk.get("completed", 0)
+                    total = chunk.get("total", 0)
+                    percent = chunk.get("percent", 0.0)
+
+                    if total > 0:
+                        gb_done = completed / (1024**3)
+                        gb_tot = total / (1024**3)
+                        status_placeholder.markdown(
+                            f"**{status_text}** • `{gb_done:.2f} GB / {gb_tot:.2f} GB` ({int(percent * 100)}%)"
+                        )
+                    else:
+                        status_placeholder.markdown(f"**{status_text}**")
+
+                    prog_bar.progress(percent)
+
+                    if chunk.get("error"):
+                        download_error = chunk["error"]
+                        break
+
+                if download_error:
+                    st.error(f"Download failed: {download_error}")
+                else:
+                    st.success("✨ Model downloaded and verified successfully!")
+                    st.session_state.show_setup_wizard = False
+                    time.sleep(1.0)
+        st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+
+        # Step 4: Multi-Language Runtimes Card
+        runtimes = runtime_manager.detect_all_runtimes()
+        all_rt_ok = all(r.installed for r in runtimes.values())
+        rt_badge_cls = "badge-pass" if all_rt_ok else "badge-warn"
+        rt_badge_text = "✓ Ready" if all_rt_ok else "⚡ Active"
+
+        rt_items_html = []
+        for r_name, r_info in runtimes.items():
+            r_dot = "dot-online" if r_info.installed else "dot-fail"
+            r_status_text = r_info.version if r_info.installed else "Not Installed"
+            rt_items_html.append(
+                f'<div class="runtime-health-row">'
+                f'<span class="status-indicator {r_dot}"></span>'
+                f'<span class="runtime-health-name">{r_name}:</span>'
+                f'<span class="runtime-health-val">{r_status_text}</span>'
+                f'</div>'
+            )
+
+        render_html(
+            f"""
+            <div class="setup-card setup-card-passed">
+              <div class="setup-card-header">
+                <div class="setup-card-left">
+                  <span class="setup-card-icon">⚡</span>
+                  <span class="setup-card-title">4. Multi-Language Sandboxes</span>
+                </div>
+                <span class="setup-card-badge {rt_badge_cls}">{rt_badge_text}</span>
+              </div>
+              <div class="setup-card-desc">
+                Sandboxed execution compilers and runtimes detected on your machine.
+              </div>
+              <div class="runtime-health-grid">
+                {''.join(rt_items_html)}
+              </div>
+            </div>
+            """
+        )
+
+        st.markdown("<div style='height: 18px;'></div>", unsafe_allow_html=True)
+
+        # Action / Continue Button
+        if status["ready"]:
+            st.success("🎉 All components are verified and operational! CodeLens AI is ready for 100% offline use.")
+            if st.button("🚀 Launch CodeLens AI Workspace", type="primary", use_container_width=True):
+                st.session_state.show_setup_wizard = False
+                st.rerun()
+        else:
+            c_check1, c_check2 = st.columns([1, 1], gap="small")
+            with c_check1:
+                if st.button("🔄 Recheck Environment", use_container_width=True):
+                    check_system_status.clear()
+                    st.rerun()
+            with c_check2:
+                if st.button("⚙️ Skip to Workspace (Manual Mode)", use_container_width=True):
+                    st.session_state.show_setup_wizard = False
+                    st.rerun()
+
+
+def render_hero() -> None:
+    c_hero, c_settings = st.columns([0.96, 0.04], gap="small")
+    with c_hero:
+        render_html(
+            """
+            <header class="ide-header">
+              <div class="ide-header-main">
+                <div class="ide-brand-section">
+                  <div class="ide-logo-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="m18 16 4-4-4-4"></path>
+                      <path d="m6 8-4 4 4 4"></path>
+                      <path d="m14.5 4-5 16"></path>
+                    </svg>
+                  </div>
+                  <div class="ide-title-block">
+                    <div class="ide-title-row">
+                      <h1 class="ide-title">CodeLens AI</h1>
+                      <span class="ide-badge">IDE</span>
+                    </div>
+                    <div class="ide-subtitle">Offline AI • Qwen2.5-Coder 3B</div>
+                  </div>
+                </div>
+                <div class="ide-chips-section">
+                  <div class="ide-chip chip-online">
+                    <span class="status-indicator dot-online"></span>
+                    <span>Online</span>
+                  </div>
+                  <div class="ide-chip chip-model">
+                    <span class="chip-tag">MODEL</span>
+                    <span>Qwen 3B</span>
+                  </div>
+                  <div class="ide-chip chip-offline">
+                    <span class="status-indicator dot-offline"></span>
+                    <span>Offline Ready</span>
+                  </div>
+                </div>
+              </div>
+              <div class="ide-status-strip">
+                <div class="strip-left">
+                  <span class="strip-pulse-dot"></span>
+                  <span class="strip-text">Local Inference Engine Ready</span>
+                </div>
+                <div class="strip-right">
+                  <span class="strip-langs">Python • C++ • Java • JavaScript</span>
+                </div>
+              </div>
+            </header>
+            """
+        )
+    with c_settings:
+        st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
+        if st.button("⚙️", key="open_setup_wizard_btn", help="Setup & Model Health"):
+            check_system_status.clear()
+            st.session_state.saved_runtime = st.session_state.get("selected_runtime", "Python")
+            st.session_state.saved_code = st.session_state.get("code_input", "")
+            st.session_state.show_setup_wizard = True
+            st.rerun()
+
+
+def render_runtime_install_card(language: str) -> None:
+    """Render a contextual one-click installer card when a required toolchain is missing."""
+    info = runtime_manager.detect_runtime(language)
+    winget_ok = runtime_manager.is_winget_available()
+
+    render_html(
+        f"""
+        <div class="setup-card setup-card-active" style="margin-bottom: 0.85rem;">
+          <div class="setup-card-header">
+            <div class="setup-card-left">
+              <span class="setup-card-icon">⚡</span>
+              <span class="setup-card-title">{info.name} Toolchain Not Detected</span>
+            </div>
+            <span class="setup-card-badge badge-fail">🔴 Missing</span>
+          </div>
+          <div class="setup-card-desc">{info.display_desc}</div>
+          <div class="setup-meta-row">
+            <span class="setup-meta-item">Package: <span class="setup-meta-highlight">{info.winget_package or 'Manual'}</span></span>
+            <span>•</span>
+            <span class="setup-meta-item">Target: <span class="setup-meta-highlight">Required to compile & run {info.name}</span></span>
+          </div>
+        </div>
+        """
+    )
+
+    c_inst1, c_inst2, c_inst3 = st.columns([1.2, 1, 1], gap="small")
+    with c_inst1:
+        if info.winget_package:
+            is_msys2_pacman = info.name == "C++" and Path(r"C:\msys64\usr\bin\pacman.exe").is_file()
+            btn_label = "📥 Install UCRT64 Toolchain" if is_msys2_pacman else f"📥 Install {info.name} (winget)"
+            spinner_msg = (
+                "Installing UCRT64 C++ GCC toolchain via MSYS2 pacman..."
+                if is_msys2_pacman
+                else f"Installing {info.name} via Windows Package Manager (winget)..."
+            )
+            if st.button(btn_label, type="primary", key=f"btn_install_{info.name}", use_container_width=True):
+                with st.spinner(spinner_msg):
+                    success, msg = runtime_manager.install_runtime_winget(info.name)
+                    if success:
+                        st.success(msg)
+                        time.sleep(1.0)
+                        st.session_state.run_result = None
+                        st.rerun()
+                    else:
+                        st.error(msg)
+        else:
+            if st.button(f"📥 Download {info.name}", type="primary", key=f"btn_install_{info.name}", use_container_width=True):
+                runtime_manager.open_official_download(info.name)
+                st.info(f"Opened official download portal for {info.name}.")
+
+    with c_inst2:
+        if st.button("🔄 Refresh Detection", key=f"btn_refresh_{info.name}", use_container_width=True):
+            runtime_manager.refresh_system_path()
+            runtime_manager.clear_runtime_cache()
+            post_check = runtime_manager.detect_runtime(info.name, use_cache=False)
+            if post_check.installed:
+                st.success(f"🎉 {info.name} detected successfully ({post_check.version})!")
+                st.session_state.run_result = None
+            else:
+                st.info(f"Refreshed. {info.name} is still not detected in system PATH.")
+            st.rerun()
+
+    with c_inst3:
+        if st.button("🌐 Official Download", key=f"btn_download_{info.name}", use_container_width=True):
+            runtime_manager.open_official_download(info.name)
+            st.info(f"Opened official download website for {info.name}.")
 
 
 def extract_optimized_code(markdown_text: str) -> str | None:
@@ -171,28 +525,63 @@ FILE_ICONS = {
 }
 
 
+def init_workspace_state() -> None:
+    """Ensure all required workspace state keys exist on every workspace render."""
+    saved_runtime = st.session_state.pop("saved_runtime", None)
+    if "selected_runtime" not in st.session_state:
+        st.session_state.selected_runtime = (
+            saved_runtime if saved_runtime in SUPPORTED_LANGUAGES else "Python"
+        )
+
+    if "prev_runtime" not in st.session_state:
+        st.session_state.prev_runtime = st.session_state.selected_runtime
+
+    saved_code = st.session_state.pop("saved_code", None)
+    if "code_input" not in st.session_state:
+        if saved_code is not None:
+            st.session_state.code_input = saved_code
+        else:
+            st.session_state.code_input = SAMPLE_SNIPPETS.get(
+                st.session_state.selected_runtime, SAMPLE_SNIPPETS["Python"]
+            )
+
+    if "explorer_open" not in st.session_state:
+        st.session_state.explorer_open = True
+
+    if "pending_code_update" in st.session_state:
+        st.session_state.code_input = st.session_state.pop("pending_code_update")
+
+
 def main() -> None:
+    t_rerun_start = time.perf_counter()
+
     st.set_page_config(
         page_title="CodeLens AI",
         page_icon="🧠",
         layout="wide",
         initial_sidebar_state="collapsed",
     )
-    if "pending_code_update" in st.session_state:
-        st.session_state.code_input = st.session_state.pop("pending_code_update")
 
+    t_css_0 = time.perf_counter()
     load_css()
+    t_css_ms = (time.perf_counter() - t_css_0) * 1000
+
+    # Check environment status with fast TTL cache
+    t_stat_0 = time.perf_counter()
+    sys_status = check_system_status()
+    t_stat_ms = (time.perf_counter() - t_stat_0) * 1000
+
+    show_wizard = st.session_state.get("show_setup_wizard", not sys_status["ready"])
+
+    if show_wizard:
+        render_onboarding_wizard(sys_status)
+        return
+
+    # Initialize / restore workspace state keys on every workspace render
+    init_workspace_state()
+
+    t_ui_0 = time.perf_counter()
     render_hero()
-
-    if "code_input" not in st.session_state:
-        st.session_state.code_input = SAMPLE_SNIPPETS["Python"]
-
-    if "selected_runtime" not in st.session_state:
-        st.session_state.selected_runtime = "Python"
-    if "prev_runtime" not in st.session_state:
-        st.session_state.prev_runtime = "Python"
-    if "explorer_open" not in st.session_state:
-        st.session_state.explorer_open = True
 
     # Single Source of Truth for active runtime and file
     runtime = st.session_state.selected_runtime
@@ -254,7 +643,7 @@ def main() -> None:
             st.selectbox(
                 "Language",
                 SUPPORTED_LANGUAGES,
-                index=lang_index,
+                index=None if "selected_runtime" in st.session_state else lang_index,
                 key="selected_runtime",
                 on_change=on_runtime_change,
                 label_visibility="collapsed",
@@ -269,7 +658,7 @@ def main() -> None:
                     <span class="session-pulse"></span>
                     <span class="session-text">Ollama Engine Ready</span>
                   </div>
-                  <div class="session-sub">Model: Qwen2.5-Coder 7B</div>
+                  <div class="session-sub">Model: Qwen2.5-Coder 3B</div>
                 </div>
 
                 <div class="sidebar-section-title">SHORTCUTS & TIPS</div>
@@ -342,11 +731,16 @@ def main() -> None:
             # Editor Status Bar
             current_lines = code.splitlines() if code else []
             active_line_count = len(current_lines) if current_lines else 1
+            rt_info = runtime_manager.detect_runtime(runtime)
+            rt_badge_text = rt_info.version_display
+            rt_dot_cls = "dot-online" if rt_info.installed else "dot-fail"
+
             render_html(
                 f"""
                 <div class="editor-status-bar">
                   <div class="status-bar-left">
-                    <span class="status-bar-item"><span class="status-bullet">⚡</span> Local AI Ready</span>
+                    <span class="status-bullet">⚡</span>
+                    <span class="status-bar-item">Local AI Ready</span>
                     <span class="status-bar-divider">•</span>
                     <span class="status-bar-item">UTF-8</span>
                     <span class="status-bar-divider">•</span>
@@ -355,7 +749,8 @@ def main() -> None:
                   <div class="status-bar-right">
                     <span class="status-bar-item">Ln {active_line_count}, Col 1</span>
                     <span class="status-bar-divider">•</span>
-                    <span class="status-bar-item lang-item">{runtime}</span>
+                    <span class="status-indicator {rt_dot_cls}"></span>
+                    <span class="status-bar-item lang-item">{rt_badge_text}</span>
                   </div>
                 </div>
                 """
@@ -398,7 +793,7 @@ def main() -> None:
             )
 
             if run_result.is_missing_toolchain:
-                st.error(f"⚠️ {run_result.error_message}")
+                render_runtime_install_card(runtime)
             elif run_result.is_timeout:
                 st.error(f"⏱️ {run_result.error_message}")
             elif run_result.error_message and not run_result.stdout and not run_result.stderr:
@@ -449,7 +844,7 @@ def main() -> None:
                 </div>
                 <div class="dock-content terminal-prompt-view">
                   <div class="terminal-line terminal-system">CodeLens AI [Workspace Terminal v2.5]</div>
-                  <div class="terminal-line terminal-ready">⚡ Inference engine ready (Qwen2.5-Coder 7B) • All runtimes active</div>
+                  <div class="terminal-line terminal-ready">⚡ Inference engine ready (Qwen2.5-Coder 3B) • All runtimes active</div>
                   <div class="terminal-line terminal-hint">Select code and click [Explain], [Improve], [Optimize], or [▶ Run] to view output.</div>
                   <div class="terminal-prompt-row">
                     <span class="terminal-ps1">codelens@workspace:~$</span>
@@ -459,7 +854,14 @@ def main() -> None:
                 """
             )
 
-    render_html('<p class="app-footer">CodeLens AI • Local AI • Qwen2.5-Coder 7B</p>')
+    render_html('<p class="app-footer">CodeLens AI • Local AI • Qwen2.5-Coder 3B</p>')
+
+    t_total_ms = (time.perf_counter() - t_rerun_start) * 1000
+    t_ui_ms = (time.perf_counter() - t_ui_0) * 1000
+    print(
+        f"[Perf] Total rerun: {t_total_ms:.1f} ms | get_system_status: {t_stat_ms:.1f} ms | CSS: {t_css_ms:.1f} ms | UI render: {t_ui_ms:.1f} ms",
+        flush=True,
+    )
 
 
 if __name__ == "__main__":

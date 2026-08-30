@@ -277,6 +277,44 @@ div[data-testid="stVerticalBlock"] {
   box-shadow: 0 0 7px #38bdf8, 0 0 2px #38bdf8;
 }
 
+.dot-fail {
+  background: #f87171;
+  box-shadow: 0 0 7px #f87171, 0 0 2px #f87171;
+}
+
+.dot-warn {
+  background: #fbbf24;
+  box-shadow: 0 0 7px #fbbf24, 0 0 2px #fbbf24;
+}
+
+.runtime-health-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.5rem 1rem;
+  margin-top: 0.55rem;
+  padding: 0.55rem 0.75rem;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 6px;
+  border: 1px solid var(--border-cyan-dim);
+}
+
+.runtime-health-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+}
+
+.runtime-health-name {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.runtime-health-val {
+  color: var(--cyan-accent);
+}
+
 .ide-status-strip {
   display: flex;
   align-items: center;
@@ -569,7 +607,7 @@ div.st-key-toggle_explorer_btn button span {
 }
 
 /* ==========================================================================
-   Language Dropdown
+   Language Dropdown (Non-editable, No Clear Button, VS Code Style)
    ========================================================================== */
 
 div[data-testid="stSelectbox"] > div,
@@ -583,6 +621,7 @@ div[data-baseweb="select"] > div {
   min-height: 2.1rem !important;
   height: 2.1rem !important;
   transition: all 0.2s ease !important;
+  cursor: pointer !important;
 }
 
 div[data-baseweb="select"] > div:hover {
@@ -595,16 +634,133 @@ div[data-baseweb="select"]:focus-within > div {
   box-shadow: 0 0 0 1px var(--cyan-accent), 0 0 10px rgba(56, 189, 248, 0.2) !important;
 }
 
+/* 1. Make selectbox non-editable: disable cursor, caret, and text typing */
+div[data-testid="stSelectbox"] input,
+div[data-baseweb="select"] input {
+  caret-color: transparent !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  pointer-events: none !important;
+}
+
+div[data-testid="stSelectbox"],
+div[data-baseweb="select"],
+div[data-baseweb="select"] * {
+  cursor: pointer !important;
+}
+
+/* 2. Target 1: Remove Clear (x) button entirely from runtime selector */
+div[data-testid="stSelectbox"] [aria-label*="Clear" i],
+div[data-testid="stSelectbox"] [aria-label*="clear" i],
+div[data-testid="stSelectbox"] [title*="Clear" i],
+div[data-testid="stSelectbox"] div[role="button"]:has(svg),
+div[data-testid="stSelectbox"] div[data-baseweb="select"] > div > div:nth-child(2):not(:last-child),
+div[data-baseweb="select"] > div > div:nth-child(2):not(:last-child),
+div[data-baseweb="select"] [aria-label*="Clear" i],
+div[data-baseweb="select"] [aria-label*="clear" i],
+div[data-baseweb="select"] [title*="Clear" i],
+div[data-baseweb="select"] [role="button"],
+div[data-baseweb="select"] div:has(svg):not(:last-child):not(:first-child) {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  position: absolute !important;
+  left: -9999px !important;
+}
+
+/* 3. Ensure Dropdown Arrow (▼) in the last container is always visible, aligned, and cyan */
+div[data-baseweb="select"] > div > div:last-child {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  padding-right: 0.35rem !important;
+}
+
+div[data-baseweb="select"] > div > div:last-child svg {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  fill: var(--cyan-accent) !important;
+  color: var(--cyan-accent) !important;
+  width: 1.05rem !important;
+  height: 1.05rem !important;
+  pointer-events: none !important;
+}
+
 div[data-baseweb="select"] [data-testid="stMarkdownContainer"] p,
+div[data-baseweb="select"] [aria-selected="true"],
 div[data-baseweb="select"] div {
   color: var(--text) !important;
   font-family: "JetBrains Mono", monospace !important;
   font-size: 0.78rem !important;
+  user-select: none !important;
 }
 
-div[data-baseweb="select"] svg {
-  fill: var(--cyan-accent) !important;
+/* Header Setup / Settings Icon Button */
+div.st-key-open_setup_wizard_btn button {
+  width: 2.1rem !important;
+  height: 2.1rem !important;
+  min-height: 2.1rem !important;
+  max-width: 2.1rem !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 6px !important;
+  background: var(--sidebar-card) !important;
+  border: 1px solid var(--border-cyan-dim) !important;
+  color: var(--text-muted) !important;
+  font-size: 0.88rem !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  cursor: pointer !important;
+}
+
+div.st-key-open_setup_wizard_btn button:hover {
+  border-color: var(--cyan-accent) !important;
   color: var(--cyan-accent) !important;
+  background: rgba(56, 189, 248, 0.12) !important;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25) !important;
+  transform: translateY(-1px) !important;
+}
+
+div.st-key-open_setup_wizard_btn button svg,
+div.st-key-open_setup_wizard_btn button [aria-label*="Clear" i],
+div.st-key-open_setup_wizard_btn button [aria-label*="clear" i],
+div.st-key-open_setup_wizard_btn button [title*="Clear" i],
+div.st-key-open_setup_wizard_btn button [role="button"],
+div.st-key-open_setup_wizard_btn button > *:not([data-testid="stMarkdownContainer"]):not(div:first-child) {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  position: absolute !important;
+  left: -9999px !important;
+}
+
+div.st-key-open_setup_wizard_btn button p,
+div.st-key-open_setup_wizard_btn button span {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0.88rem !important;
+  line-height: 1 !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 div[data-baseweb="popover"],
@@ -625,6 +781,7 @@ li[role="option"] {
   padding: 0.32rem 0.6rem !important;
   margin: 1px 0 !important;
   transition: background 0.15s ease !important;
+  cursor: pointer !important;
 }
 
 li[role="option"]:hover,
@@ -1075,3 +1232,167 @@ code, pre, .stCode {
     width: 100% !important;
   }
 }
+
+/* ==========================================================================
+   Phase H3: Setup Wizard & Onboarding Screen
+   ========================================================================== */
+
+.setup-container {
+  max-width: 860px;
+  margin: 1rem auto 2rem;
+  padding: 0 0.5rem;
+}
+
+.setup-header-card {
+  background: linear-gradient(180deg, #111724 0%, #0c111a 100%);
+  border: 1px solid var(--border-cyan);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  margin-bottom: 1.25rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.setup-header-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(56, 189, 248, 0.6) 20%, rgba(45, 212, 191, 0.6) 80%, transparent 100%);
+}
+
+.setup-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.setup-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.setup-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.setup-subtitle {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+.setup-step-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-bottom: 1.25rem;
+}
+
+.setup-card {
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(16px);
+  transition: all 0.2s ease;
+}
+
+.setup-card-active {
+  border-color: var(--cyan-accent);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.12);
+}
+
+.setup-card-passed {
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.setup-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.45rem;
+}
+
+.setup-card-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.setup-card-icon {
+  font-size: 1.1rem;
+}
+
+.setup-card-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.setup-card-badge {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.18rem 0.55rem;
+  border-radius: 4px;
+}
+
+.badge-pass {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+
+.badge-warn {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+}
+
+.badge-fail {
+  background: rgba(248, 113, 113, 0.15);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  color: #f87171;
+}
+
+.setup-card-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 0.4rem;
+}
+
+.setup-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin-top: 0.35rem;
+}
+
+.setup-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.setup-meta-highlight {
+  color: var(--cyan-accent);
+  font-weight: 600;
+}
+
