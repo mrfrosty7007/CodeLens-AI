@@ -1,6 +1,6 @@
-# CodeLens AI v1.0 — Offline AI Code Explainer
+# CodeLens AI v1.0 — Cloud AI Code Intelligence
 
-**CodeLens AI** is an offline, private, desktop-grade AI Code Intelligence workspace powered locally by **Ollama** running **Qwen2.5-Coder 3B**.
+**CodeLens AI** is a desktop-grade AI Code Intelligence workspace powered by **Google Gemini 3.6 Flash**.
 
 ---
 
@@ -9,20 +9,15 @@
 1. Download **[`CodeLensAI-Setup.exe`](https://github.com/mrfrosty7007/CodeLens-AI/releases/download/v1.0.0/CodeLensAI-Setup.exe)** from this release.
 2. Run the installer and click **Install**.
 3. Launch **CodeLens AI** from your Start Menu, Desktop, or the installer finish screen.
-4. Complete the guided one-time setup:
-   - **Ollama Detection**: Verifies or installs Ollama automatically via Windows Package Manager (`winget`).
-   - **Local Inference Engine**: Automatically boots `ollama serve` in the background.
-   - **AI Model Download**: Downloads `qwen2.5-coder:3b` (~1.9 GB) directly to local storage.
-5. CodeLens AI opens automatically in your browser—**100% private, local, and offline**.
-
-> **Note:** The model download (~1.9 GB) is a **one-time setup**. Afterward, CodeLens AI operates completely offline with zero internet access required.
+4. Configure your Gemini API key in `.env` (`GEMINI_API_KEY=your_key`) or via the in-app setup screen.
+5. CodeLens AI opens automatically in your browser.
 
 ---
 
 ## ✨ Key Highlights in v1.0
 
-### 🤖 Local Offline AI Engine
-- **Ollama & Qwen2.5-Coder 3B**: 100% local inference with zero cloud dependency and zero telemetry.
+### 🤖 Google Gemini 3.6 Flash Engine
+- **Powered by Gemini 3.6 Flash**: Fast, high-accuracy cloud intelligence using the official Google GenAI SDK (`google-genai`).
 - **Explain Mode**: Step-by-step logic explanations, algorithm analysis, $O(N)$ time & space complexity breakdowns, and key function/variable explanations.
 - **Improve Mode**: Clean code refactoring for readability, idiomatic style, and maintainability with change summaries.
 - **Optimize Mode**: Algorithmic performance optimization with auto-editor insertion and instant 1-click Undo.
@@ -45,9 +40,15 @@
 
 ## 📦 Release Assets & Checksums
 
-| File | Size | SHA-256 Checksum | Description |
-| :--- | :--- | :--- | :--- |
-| **`CodeLensAI-Setup.exe`** | ~97 MB | `f25c21e83dcb4dd2bf820c3032778d415ea2462917de16783d67730c74e4d4bb` | Standalone Windows 1-Click Installer |
-| `Source code (zip)` | — | — | Source code archive |
-| `Source code (tar.gz)` | — | — | Source code tarball |
+| File | Platform | Size | SHA-256 Checksum | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| **`CodeLensAI-Setup.exe`** | Windows x64 | ~97 MB | `f25c21e83dcb4dd2bf820c3032778d415ea2462917de16783d67730c74e4d4bb` | Standalone Windows 1-Click Installer |
+| **`CodeLensAI-1.0.0-x86_64.AppImage`** | Linux x86_64 | ~149 MB | `10a49cea807093e448a33b81bbec4a72fc26837ab8979c68ef0275aeb62535e4` | Standalone Portable Linux AppImage |
+| `Source code (zip)` | Any | — | — | Source code archive |
+| `Source code (tar.gz)` | Any | — | — | Source code tarball |
 
+### Linux Quick Start
+```bash
+chmod +x CodeLensAI-1.0.0-x86_64.AppImage
+./CodeLensAI-1.0.0-x86_64.AppImage
+```

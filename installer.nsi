@@ -40,7 +40,7 @@ Unicode True
 ; Installer Pages
 ; ------------------------------------------------------------------------------
 !define MUI_WELCOMEPAGE_TITLE "Welcome to CodeLens AI Setup"
-!define MUI_WELCOMEPAGE_TEXT "This wizard will guide you through installing CodeLens AI—the offline, private AI code intelligence workspace powered by local inference.$\r$\n$\r$\nClick Next to continue."
+!define MUI_WELCOMEPAGE_TEXT "This wizard will guide you through installing CodeLens AI—the AI code intelligence workspace powered by Google Gemini.$\r$\n$\r$\nClick Next to continue."
 !insertmacro MUI_PAGE_WELCOME
 
 !insertmacro MUI_PAGE_DIRECTORY
@@ -49,7 +49,7 @@ Unicode True
 ; Finish Page with Launch Option
 !define MUI_FINISHPAGE_RUN "$INSTDIR\${MAIN_EXECUTABLE}"
 !define MUI_FINISHPAGE_RUN_TEXT "Launch CodeLens AI now"
-!define MUI_FINISHPAGE_TEXT "CodeLens AI has been successfully installed on your computer.$\r$\n$\r$\nFirst launch will verify local AI components (Ollama & Qwen 3B) for 100% offline use."
+!define MUI_FINISHPAGE_TEXT "CodeLens AI has been successfully installed on your computer.$\r$\n$\r$\nConfigure your GEMINI_API_KEY in .env to begin analyzing, explaining, and optimizing code."
 !insertmacro MUI_PAGE_FINISH
 
 ; ------------------------------------------------------------------------------

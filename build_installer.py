@@ -134,7 +134,7 @@ def step_1_verify_prerequisites() -> None:
     print(f"    Found virtual environment: {format_rel_path(VENV_DIR)}", flush=True)
 
     # 2. Verify launcher and app source files
-    for req_file in ["launcher.py", "app.py", "setup_manager.py", "runtime_manager.py", "code_runner.py", "ollama_client.py", "prompts.py"]:
+    for req_file in ["launcher.py", "app.py", "setup_manager.py", "runtime_manager.py", "code_runner.py", "gemini_client.py", "prompts.py"]:
         p = ROOT_DIR / req_file
         if not p.is_file():
             raise RuntimeError(f"Required source file missing: {format_rel_path(p)}")
@@ -221,7 +221,7 @@ def step_3_assemble_package(launcher_exe: Path) -> None:
         "styles.css",
         "code_runner.py",
         "runtime_manager.py",
-        "ollama_client.py",
+        "gemini_client.py",
         "prompts.py",
         "setup_manager.py",
         "launcher.py",
@@ -290,7 +290,7 @@ def step_5_verify_runtime() -> None:
     test_import_cmd = [
         str(pkg_py),
         "-c",
-        "import streamlit, httpx, pygments, app, setup_manager, runtime_manager, code_runner, ollama_client, prompts; print('__PACKAGE_READY__')",
+        "import streamlit, google.genai, pygments, app, setup_manager, runtime_manager, code_runner, gemini_client, prompts; print('__PACKAGE_READY__')",
     ]
     res_import = subprocess.run(
         test_import_cmd,
